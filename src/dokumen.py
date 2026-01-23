@@ -211,6 +211,58 @@ class KelolaDokumen(QWidget):
 
     def notifikasi_custom(self, judul, pesan, ikon):
         msg = QMessageBox(self)
-        msg.setWindowTitle(judul); msg.setText(pesan); msg.setIcon(ikon)
-        msg.setStyleSheet("QMessageBox { background-color: white; } QLabel { color: black; } QPushButton { color: black; min-width: 80px; }")
+        msg.setWindowTitle(judul)
+        msg.setIcon(QMessageBox.Icon.NoIcon)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+
+        icon_emoji = {
+            QMessageBox.Icon.Information: "ℹ️",
+            QMessageBox.Icon.Warning: "⚠️",
+            QMessageBox.Icon.Critical: "❌",
+            QMessageBox.Icon.Question: "❓"
+        }
+
+        emoji = icon_emoji.get(ikon, "ℹ️")
+
+        msg.setText(f"""
+            <div style='text-align:center; padding:10px 6px;'>
+                <div style='font-size:22px; margin-bottom:6px;'>{emoji}</div>
+                <div style='font-size:13px; color:#2c3e50; line-height:1.4;'>
+                    {pesan}
+                </div>
+            </div>
+        """)
+
+        msg.setStyleSheet("""
+            QMessageBox {
+                background-color: #ffffff;
+                min-width: 280px;
+                border-radius: 8px;
+            }
+
+            QMessageBox QLabel {
+                padding: 8px 12px;
+                background: transparent;
+            }
+
+            QMessageBox QPushButton {
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 18px;
+                font-size: 12px;
+                min-width: 80px;
+                min-height: 28px;
+            }
+
+            QMessageBox QPushButton:hover {
+                background-color: #2980b9;
+            }
+
+            QMessageBox QPushButton:pressed {
+                background-color: #21618c;
+            }
+        """)
+
         msg.exec()

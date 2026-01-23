@@ -21,80 +21,74 @@ class FormTambahSurat(QDialog):
         self.setStyleSheet(f"""
             QDialog {{ background-color: #f4f6f8; }}
             QLabel {{ color: #34495e; font-weight: 600; font-size: 13px; }}
-            
-            /* Styling Umum Input - WARNA TEKS HITAM DIPAKSA */
+
             QLineEdit, QDateEdit, QComboBox {{ 
                 border: 1px solid #dcdde1; 
                 border-radius: 6px; 
-                color: #000000; /* HITAM - tidak terpengaruh tema Windows */
+                color: #000000;
                 background: white;
                 font-size: 13px;
                 min-height: 25px;
             }}
 
-            /* Styling Khusus QLineEdit (Padding Rata) */
             QLineEdit {{
                 padding: 10px;
-                color: #000000; /* HITAM */
+                color: #000000;
             }}
 
-            /* PERBAIKAN: Styling Khusus ComboBox & DateEdit 
-               Memberi ruang di kanan (padding-right) agar panah tidak tertutup */
             QComboBox, QDateEdit {{
                 padding: 5px;
                 padding-left: 10px;
-                padding-right: 30px;
-                color: #000000; /* HITAM */
+                padding-right: 30px;  /* ruang untuk panah bawaan */
+                color: #000000;
             }}
 
-            /* Pastikan teks tetap hitam saat fokus */
             QLineEdit:focus, QComboBox:focus, QDateEdit:focus {{
                 border: 1px solid #3498db;
                 background: #ffffff;
-                color: #000000; /* HITAM */
+                color: #000000;
             }}
 
-            /* Pastikan teks tetap hitam saat disabled */
             QLineEdit:disabled, QComboBox:disabled, QDateEdit:disabled {{
-                color: #000000; /* HITAM */
+                color: #000000;
                 background: #f0f0f0;
             }}
 
-            /* Pastikan teks di ComboBox dropdown juga hitam */
             QComboBox QAbstractItemView {{
                 border: 1px solid #dcdde1;
                 background-color: white;
-                color: #000000; /* HITAM untuk item dropdown */
+                color: #000000;
                 selection-background-color: #3498db;
-                selection-color: white; /* Putih saat item dipilih */
+                selection-color: white;
                 padding: 5px;
             }}
 
-            /* Pastikan teks yang sedang ditulis di ComboBox editable tetap hitam */
             QComboBox:editable {{
-                color: #000000; /* HITAM */
+                color: #000000;
             }}
 
-            /* Override untuk semua state widget */
             QLineEdit:hover, QComboBox:hover, QDateEdit:hover {{
-                color: #000000; /* HITAM */
+                color: #000000;
             }}
 
+            /* GroupBox tanpa “kartu putih” */
             QGroupBox {{
-                background-color: white;
+                background-color: transparent;
                 border: 1px solid #e0e0e0;
                 border-radius: 8px;
                 margin-top: 10px;
                 font-weight: bold;
                 color: #2c3e50;
             }}
+
             QGroupBox::title {{
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 5px;
+                background: #f4f6f8;
             }}
 
-            /* PERBAIKAN: Styling Tombol Panah Dropdown */
+            /* Area tombol dropdown – tetap ada, tapi panah pakai bawaan Qt */
             QComboBox::drop-down, QDateEdit::drop-down {{
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
@@ -106,19 +100,13 @@ class FormTambahSurat(QDialog):
                 border-bottom-right-radius: 6px;
                 background: #ecf0f1;
             }}
-            
-            /* Panah saat hover */
+
             QComboBox::drop-down:hover, QDateEdit::drop-down:hover {{
                 background: #d5dbdb;
             }}
-            
-            /* Menggunakan gambar arrow yang sudah dibuat */
-            QComboBox::down-arrow, QDateEdit::down-arrow {{
-                image: url({self.arrow_icon_path});
-                width: 12px;
-                height: 12px;
-            }}
         """)
+
+
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)

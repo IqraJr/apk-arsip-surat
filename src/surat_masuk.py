@@ -341,33 +341,61 @@ class SuratMasuk(QWidget):
         msg.setWindowTitle("Konfirmasi Hapus")
         msg.setText("Apakah Anda yakin? Data dan file fisik akan dihapus permanen.")
         msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
-        
-        # Styling agar tombol konfirmasi terbaca
+
+        # Style dasar dialog
         msg.setStyleSheet("""
-            QMessageBox { background-color: #ffffff; }
-            QLabel { color: #000000; font-size: 13px; }
-            QPushButton { color: #000000; background-color: #e1e1e1; min-width: 80px; }
+            QMessageBox { 
+                background-color: #ffffff; 
+            }
+
+            QMessageBox QLabel { 
+                background: transparent;
+                color: #000000; 
+                font-size: 13px; 
+                padding: 6px 4px;
+            }
+
+            QMessageBox QPushButton { 
+                min-width: 90px; 
+                min-height: 30px;
+                border-radius: 6px;
+                font-size: 12px;
+                border: none;
+                padding: 6px 14px;
+                color: white;
+            }
         """)
+
+        # Ambil tombol secara eksplisit (aman di semua bahasa OS)
+        btn_yes = msg.button(QMessageBox.StandardButton.Yes)
+        btn_no  = msg.button(QMessageBox.StandardButton.No)
+
+        # Styling langsung
+        btn_yes.setStyleSheet("background-color: #27ae60;")
+        btn_yes.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        btn_no.setStyleSheet("background-color: #e74c3c;")
+        btn_no.setCursor(Qt.CursorShape.PointingHandCursor)
 
         if msg.exec() == QMessageBox.StandardButton.Yes:
             try:
                 db = connect_db()
                 cursor = db.cursor()
 
-                # 2. AMBIL PATH FILE SEBELUM DATA DIHAPUS
+                # 2. Ambil path file sebelum data dihapus
                 cursor.execute("SELECT file_path FROM surat WHERE id=?", (db_id,))
                 result = cursor.fetchone()
                 
                 if result:
                     path_file = result[0]
-                    # 3. HAPUS FILE FISIK JIKA ADA
+                    # 3. Hapus file fisik jika ada
                     if path_file and os.path.exists(path_file):
                         try:
                             os.remove(path_file)
                         except Exception as e:
                             print(f"Gagal menghapus file fisik: {e}")
 
-                # 4. HAPUS DATA DARI DATABASE
+                # 4. Hapus data dari database
                 cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
                 db.commit()
                 db.close()
@@ -384,29 +412,57 @@ class SuratMasuk(QWidget):
     def notifikasi_custom(self, judul, pesan, ikon):
         msg = QMessageBox(self)
         msg.setWindowTitle(judul)
-        msg.setText(pesan)
-        msg.setIcon(ikon)
-        
-        # Memberikan style yang lebih spesifik agar tidak didepak oleh style global
+        msg.setIcon(QMessageBox.Icon.NoIcon)
+        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+
+        icon_emoji = {
+            QMessageBox.Icon.Information: "ℹ️",
+            QMessageBox.Icon.Warning: "⚠️",
+            QMessageBox.Icon.Critical: "❌",
+            QMessageBox.Icon.Question: "❓"
+        }
+
+        emoji = icon_emoji.get(ikon, "ℹ️")
+
+        msg.setText(f"""
+            <div style='text-align:center; padding:10px 6px;'>
+                <div style='font-size:22px; margin-bottom:6px;'>{emoji}</div>
+                <div style='font-size:13px; color:#2c3e50; line-height:1.4;'>
+                    {pesan}
+                </div>
+            </div>
+        """)
+
         msg.setStyleSheet("""
             QMessageBox {
                 background-color: #ffffff;
+                min-width: 280px;
+                border-radius: 8px;
             }
+
             QMessageBox QLabel {
-                color: #000000;
-                font-size: 14px;
-                min-width: 250px;
+                padding: 8px 12px;
+                background: transparent;
             }
+
             QMessageBox QPushButton {
-                color: #000000;
-                background-color: #e1e1e1;
-                border: 1px solid #adadad;
-                border-radius: 4px;
-                padding: 5px 15px;
+                background-color: #3498db;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 18px;
+                font-size: 12px;
                 min-width: 80px;
+                min-height: 28px;
             }
+
             QMessageBox QPushButton:hover {
-                background-color: #d1d1d1;
+                background-color: #2980b9;
+            }
+
+            QMessageBox QPushButton:pressed {
+                background-color: #21618c;
             }
         """)
+
         msg.exec()
