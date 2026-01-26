@@ -8,7 +8,8 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QFileDialog)
 from PyQt6.QtCore import Qt, QDate
 from .db_manager import connect_db
-from .form_surat import FormTambahSurat 
+from .form_surat import FormTambahSurat
+from .settings import get_folder_path, set_folder_path
 
 class SuratMasuk(QWidget):
     def __init__(self):
@@ -26,10 +27,36 @@ class SuratMasuk(QWidget):
 
         # --- HEADER ---
         header_layout = QHBoxLayout()
+        
+        # Container untuk Judul dan Info Folder
+        judul_container = QVBoxLayout()
+        
         title = QLabel("📥 Manajemen Surat Masuk")
         title.setStyleSheet("font-size: 22px; font-weight: bold; color: #2d3436;")
-        header_layout.addWidget(title)
+        
+        # WIDGET BARU: Label Info Folder
+        self.lbl_folder = QLabel()
+        self.lbl_folder.setStyleSheet("color: #636e72; font-size: 12px; font-style: italic;")
+        self.update_label_folder() # Panggil fungsi update text
+        
+        judul_container.addWidget(title)
+        judul_container.addWidget(self.lbl_folder)
+        
+        header_layout.addLayout(judul_container)
         header_layout.addStretch()
+
+        # WIDGET BARU: Tombol Ganti Folder
+        self.btn_ganti_folder = QPushButton("📂 Ganti Folder")
+        self.btn_ganti_folder.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_ganti_folder.setStyleSheet("""
+            QPushButton {
+                background-color: #0984e3; color: white; padding: 8px 15px; 
+                border-radius: 6px; font-size: 12px;
+            }
+            QPushButton:hover { background-color: #74b9ff; }
+        """)
+        self.btn_ganti_folder.clicked.connect(self.aksi_ganti_folder)
+        header_layout.addWidget(self.btn_ganti_folder)
 
         self.btn_tambah = QPushButton("+ Tambah Surat Masuk")
         self.btn_tambah.setCursor(Qt.CursorShape.PointingHandCursor)
@@ -121,6 +148,19 @@ class SuratMasuk(QWidget):
         self.main_layout.addLayout(bottom_layout)
 
         self.load_data()
+
+    # --- FUNGSI PENDUKUNG (Dipisah dari init_ui) ---
+
+    def update_label_folder(self):
+        path = get_folder_path("masuk")
+        self.lbl_folder.setText(f"Penyimpanan: {path}")
+
+    def aksi_ganti_folder(self):
+        folder = QFileDialog.getExistingDirectory(self, "Pilih Folder Penyimpanan Surat Masuk")
+        if folder:
+            set_folder_path("masuk", folder)
+            self.update_label_folder()
+            self.notifikasi_custom("Sukses", "Lokasi penyimpanan Surat Masuk berhasil diubah!", QMessageBox.Icon.Information)
 
     def load_data(self):
         try:
@@ -260,50 +300,87 @@ class SuratMasuk(QWidget):
                 return
 
             try:
-                up_dir = os.path.join("uploads", "surat_masuk")
+                # --- PERUBAHAN DI SINI ---
+                # Mengambil path dinamis dari settings
+                up_dir = get_folder_path("masuk") 
+                
+                # Pastikan folder tersebut ada (buat jika belum ada)
                 os.makedirs(up_dir, exist_ok=True)
+                
+                # Proses Copy File
                 ext = os.path.splitext(path_asal)[1]
-                path_dest = os.path.join(up_dir, f"IN_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}")
+                nama_file_baru = f"IN_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
+                path_dest = os.path.join(up_dir, nama_file_baru)
+                
                 shutil.copy(path_asal, path_dest)
                 
+                # Simpan PATH LENGKAP ke database agar file tetap bisa dibuka
+                # meskipun folder dipindah-pindah
                 db = connect_db()
                 cursor = db.cursor()
                 cursor.execute("""
                     INSERT INTO surat (nomor_surat, judul_surat, asal_surat, kategori, tanggal, tanggal_surat, keterangan, file_path) 
                     VALUES (?, ?, ?, 'masuk', ?, ?, ?, ?)
-                """, (nomor, perihal, dari, tgl_terima, tgl_surat, ket, path_dest))
+                """, (nomor, perihal, dari, tgl_terima, tgl_surat, ket, path_dest)) # Gunakan path_dest (path lengkap)
+                
                 db.commit()
                 db.close()
                 self.load_data()
                 self.notifikasi_custom("Berhasil", "Data berhasil diarsipkan!", QMessageBox.Icon.Information)
-            except Exception as e: self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
+            except Exception as e: 
+                self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
 
     def aksi_edit(self, data):
-        dialog = FormTambahSurat(self, kategori="Masuk") # Sesuaikan kategori ("Masuk" atau "Keluar")
-        dialog.setWindowTitle("Edit Surat")
+        dialog = FormTambahSurat(self, kategori="Masuk")
+        dialog.setWindowTitle("Edit Surat Masuk")
+        
+        # Simpan path lama untuk perbandingan nanti
+        path_lama = data[7] 
         
         # Mengisi form dengan data lama
         dialog.ent_tanggal.setDate(QDate.fromString(data[1], "yyyy-MM-dd"))
         dialog.ent_pihak.setText(str(data[2]))
         dialog.ent_nomor.setText(str(data[3]))
         dialog.ent_tgl_surat.setDate(QDate.fromString(data[4], "yyyy-MM-dd"))
-        
-        # Pre-fill ComboBox (Isi apa adanya dulu)
         dialog.ent_perihal.setCurrentText(str(data[5])) 
-        
         dialog.ent_keterangan.setText(str(data[6]))
-        dialog.file_path = data[7]
+        dialog.file_path = path_lama
 
         if dialog.exec():
             try:
-                # --- LOGIKA PEMBERSIHAN KODE ---
+                # --- 1. Logika Pembersihan Judul ---
                 raw_perihal = dialog.ent_perihal.currentText().strip()
                 if " - " in raw_perihal:
                     perihal = raw_perihal.rsplit(" - ", 1)[0]
                 else:
                     perihal = raw_perihal
-                # -------------------------------
+                
+                # --- 2. Logika Pemindahan File (Jika Berubah) ---
+                path_baru_input = dialog.file_path
+                final_path = path_lama # Defaultnya pakai path lama
 
+                # Jika user memilih file baru (path berbeda dengan database)
+                if path_baru_input != path_lama:
+                    # Ambil folder tujuan saat ini
+                    up_dir = get_folder_path("masuk")
+                    os.makedirs(up_dir, exist_ok=True)
+                    
+                    # Buat nama file unik baru
+                    ext = os.path.splitext(path_baru_input)[1]
+                    # Tambahkan penanda 'EDIT' agar mudah dilacak
+                    nama_file_baru = f"IN_EDIT_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
+                    path_dest = os.path.join(up_dir, nama_file_baru)
+                    
+                    # Salin file ke folder arsip
+                    shutil.copy(path_baru_input, path_dest)
+                    final_path = path_dest
+                    
+                    # (Opsional) Hapus file lama jika ingin hemat memori
+                    # if path_lama and os.path.exists(path_lama):
+                    #    try: os.remove(path_lama)
+                    #    except: pass
+
+                # --- 3. Update Database ---
                 db = connect_db()
                 cursor = db.cursor()
                 
@@ -315,19 +392,19 @@ class SuratMasuk(QWidget):
                     dialog.ent_pihak.text(), 
                     dialog.ent_nomor.text(), 
                     dialog.ent_tgl_surat.date().toString("yyyy-MM-dd"), 
-                    perihal, # Gunakan perihal yang sudah dibersihkan
+                    perihal, 
                     dialog.ent_keterangan.text(), 
-                    dialog.file_path, 
+                    final_path, # Gunakan path yang sudah dipastikan di folder arsip
                     data[0]
                 ))
 
                 db.commit()
                 db.close()
                 self.load_data()
-                self.notifikasi_custom("Sukses", "Data diperbarui!", QMessageBox.Icon.Information)
+                self.notifikasi_custom("Sukses", "Data dan file berhasil diperbarui!", QMessageBox.Icon.Information)
             except Exception as e: 
                 self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
-
+                
     def aksi_hapus(self):
         row = self.table.currentRow()
         if row < 0: 

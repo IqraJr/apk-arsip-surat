@@ -13,7 +13,7 @@ from src.kode_surat import ManajemenKodeSurat
 class AplikasiUtama(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Sistem Manajemen Arsip Digital v1.0")
+        self.setWindowTitle("Sistem Manajemen Arsip Digital Surat")
         self.resize(1200, 800)
 
         # Cek Koneksi Database (SQLite)
@@ -42,7 +42,7 @@ class AplikasiUtama(QMainWindow):
         sidebar_layout.setContentsMargins(0, 10, 0, 10)
         sidebar_layout.setSpacing(5)
 
-        logo_label = QLabel("E-ARSIP")
+        logo_label = QLabel("SI-PENGARSIP")
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo_label.setStyleSheet("color: white; font-size: 22px; font-weight: bold; padding: 30px;")
         sidebar_layout.addWidget(logo_label)

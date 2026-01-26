@@ -14,10 +14,10 @@ class FormTambahSurat(QDialog):
         self.setFixedWidth(500)
         self.file_path = ""
         
-        # Buat ikon panah terlebih dahulu
+        # Buat ikon panah (disiapkan jika nanti ingin custom arrow)
         self.create_arrow_icon()
         
-        # --- GLOBAL STYLING YANG DIPERBAIKI - WARNA HITAM TETAP ---
+        # --- GLOBAL STYLING ---
         self.setStyleSheet(f"""
             QDialog {{ background-color: #f4f6f8; }}
             QLabel {{ color: #34495e; font-weight: 600; font-size: 13px; }}
@@ -39,7 +39,7 @@ class FormTambahSurat(QDialog):
             QComboBox, QDateEdit {{
                 padding: 5px;
                 padding-left: 10px;
-                padding-right: 30px;  /* ruang untuk panah bawaan */
+                padding-right: 30px; 
                 color: #000000;
             }}
 
@@ -88,7 +88,7 @@ class FormTambahSurat(QDialog):
                 background: #f4f6f8;
             }}
 
-            /* Area tombol dropdown – tetap ada, tapi panah pakai bawaan Qt */
+            /* Area tombol dropdown */
             QComboBox::drop-down, QDateEdit::drop-down {{
                 subcontrol-origin: padding;
                 subcontrol-position: top right;
@@ -106,8 +106,6 @@ class FormTambahSurat(QDialog):
             }}
         """)
 
-
-        
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(20, 20, 20, 20)
         self.layout.setSpacing(15)
@@ -218,6 +216,7 @@ class FormTambahSurat(QDialog):
         self.btn_simpan.clicked.connect(self.accept) 
         self.layout.addWidget(self.btn_simpan)
 
+        # Terapkan perbaikan tampilan kalender
         self.setup_calendar_style()
 
     def create_arrow_icon(self):
@@ -240,18 +239,85 @@ class FormTambahSurat(QDialog):
         self.arrow_icon_path = temp_file.name
 
     def setup_calendar_style(self):
-        # Memastikan panah di dalam kalender popup tetap terlihat
-        style = """
-            QCalendarWidget QAbstractItemView:enabled { 
-                selection-background-color: #3498db; color: black; 
-            } 
-            QCalendarWidget QToolButton { 
-                color: black; font-weight: bold; background: transparent; icon-size: 20px;
-            }
-            QCalendarWidget QWidget#qt_calendar_navigationbar { background-color: white; }
         """
-        self.ent_tanggal.calendarWidget().setStyleSheet(style)
-        self.ent_tgl_surat.calendarWidget().setStyleSheet(style)
+        Memperbaiki tampilan kalender agar tetap Terang (Putih/Hitam)
+        meskipun sistem operasi menggunakan Dark Mode.
+        """
+        style_kalender = """
+            /* Area utama kalender - Paksa putih */
+            QCalendarWidget QWidget {
+                background-color: white; 
+                color: black;
+            }
+            
+            /* Navigation Bar (Header Bulan Tahun) */
+            QCalendarWidget QWidget#qt_calendar_navigationbar { 
+                background-color: white; 
+            }
+
+            /* Tombol Panah Kiri/Kanan & Bulan */
+            QCalendarWidget QToolButton {
+                color: black;
+                background-color: transparent;
+                icon-size: 24px;
+                font-weight: bold;
+                border: none;
+            }
+            QCalendarWidget QToolButton:hover {
+                background-color: #e0e0e0;
+                border-radius: 4px;
+            }
+
+            /* Menu Dropdown Bulan (FIX UNTUK DARK MODE) */
+            QCalendarWidget QMenu {
+                background-color: white;
+                color: black;
+                border: 1px solid #ccc;
+            }
+            QCalendarWidget QMenu::item {
+                padding: 4px 8px;
+            }
+            QCalendarWidget QMenu::item:selected {
+                background-color: #3498db;
+                color: white;
+            }
+
+            /* SpinBox Tahun */
+            QCalendarWidget QSpinBox {
+                color: black;
+                background-color: white;
+                selection-background-color: #3498db;
+                selection-color: white;
+            }
+            QCalendarWidget QSpinBox::up-button, QCalendarWidget QSpinBox::down-button {
+                subcontrol-origin: border;
+                width: 16px;
+            }
+
+            /* Grid Tanggal (Hari 1-31) */
+            QCalendarWidget QAbstractItemView:enabled {
+                color: black;  
+                background-color: white;
+                selection-background-color: #3498db; 
+                selection-color: white;
+                outline: none;
+            }
+            QCalendarWidget QAbstractItemView:disabled {
+                color: #bfbfbf;
+                background-color: white;
+            }
+            
+            /* Header Hari (Sen, Sel, Rab...) */
+            QCalendarWidget QTableView {
+                alternate-background-color: #f7f7f7;
+                background-color: white;
+                color: black;
+            }
+        """
+        
+        # Terapkan style ke kedua input tanggal
+        self.ent_tanggal.setStyleSheet(style_kalender)
+        self.ent_tgl_surat.setStyleSheet(style_kalender)
 
     def pilih_berkas(self):
         file, _ = QFileDialog.getOpenFileName(self, "Pilih File Scan", "", "Images/PDF (*.jpg *.jpeg *.png *.pdf)")
