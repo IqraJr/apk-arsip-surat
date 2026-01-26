@@ -5,7 +5,7 @@ from datetime import datetime
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QTableWidget, QTableWidgetItem, 
                              QLineEdit, QHeaderView, QMessageBox, QAbstractItemView,
-                             QFileDialog)
+                             QFileDialog, QDialog)
 from PyQt6.QtCore import Qt, QDate
 from .db_manager import connect_db
 from .form_surat import FormTambahSurat
@@ -487,59 +487,84 @@ class SuratMasuk(QWidget):
         else: self.notifikasi_custom("Error", "File tidak ditemukan!", QMessageBox.Icon.Critical)
 
     def notifikasi_custom(self, judul, pesan, ikon):
-        msg = QMessageBox(self)
-        msg.setWindowTitle(judul)
-        msg.setIcon(QMessageBox.Icon.NoIcon)
-        msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+        # --- MEMBUAT DIALOG CUSTOM (Agar posisi benar-benar di tengah) ---
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Pemberitahuan")
+        dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
+        dialog.setFixedWidth(380) # Lebar fix agar proporsional
+        dialog.setStyleSheet("background-color: white; border-radius: 8px;")
+        
+        # Layout utama vertikal
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(25, 25, 25, 25) # Margin sekeliling
+        layout.setSpacing(10) # Jarak antar elemen
+        
+        # 1. Tentukan Icon & Warna
+        emoji = "✅" 
+        warna_judul = "#27ae60" # Hijau Sukses
+        
+        if ikon == QMessageBox.Icon.Warning:
+            emoji = "⚠️"
+            warna_judul = "#f39c12" # Kuning Peringatan
+        elif ikon == QMessageBox.Icon.Critical:
+            emoji = "❌"
+            warna_judul = "#c0392b" # Merah Error
+        elif ikon == QMessageBox.Icon.Question:
+            emoji = "❓"
+            warna_judul = "#3498db" # Biru Tanya
 
-        icon_emoji = {
-            QMessageBox.Icon.Information: "ℹ️",
-            QMessageBox.Icon.Warning: "⚠️",
-            QMessageBox.Icon.Critical: "❌",
-            QMessageBox.Icon.Question: "❓"
-        }
-
-        emoji = icon_emoji.get(ikon, "ℹ️")
-
-        msg.setText(f"""
-            <div style='text-align:center; padding:10px 6px;'>
-                <div style='font-size:22px; margin-bottom:6px;'>{emoji}</div>
-                <div style='font-size:13px; color:#2c3e50; line-height:1.4;'>
-                    {pesan}
-                </div>
-            </div>
+        # 2. Widget Icon (Emoji)
+        lbl_icon = QLabel(emoji)
+        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_icon.setStyleSheet("font-size: 55px; border: none; background: transparent;")
+        layout.addWidget(lbl_icon)
+        
+        # 3. Widget Judul
+        lbl_judul = QLabel(judul.upper())
+        lbl_judul.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_judul.setStyleSheet(f"""
+            font-size: 20px; 
+            font-weight: 900; 
+            color: {warna_judul}; 
+            border: none; 
+            background: transparent;
+            margin-top: 5px;
         """)
+        layout.addWidget(lbl_judul)
+        
+        # 4. Widget Pesan
+        lbl_pesan = QLabel(pesan)
+        lbl_pesan.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_pesan.setWordWrap(True) # Agar text panjang turun ke bawah otomatis
+        lbl_pesan.setStyleSheet("""
+            font-size: 13px; 
+            color: #57606f; 
+            line-height: 1.4; 
+            border: none; 
+            background: transparent;
+        """)
+        layout.addWidget(lbl_pesan)
+        
+        # Spasi sebelum tombol
+        layout.addSpacing(15)
 
-        msg.setStyleSheet("""
-            QMessageBox {
-                background-color: #ffffff;
-                min-width: 280px;
-                border-radius: 8px;
-            }
-
-            QMessageBox QLabel {
-                padding: 8px 12px;
-                background: transparent;
-            }
-
-            QMessageBox QPushButton {
-                background-color: #3498db;
+        # 5. Tombol OK (Full Width)
+        btn_ok = QPushButton("OK")
+        btn_ok.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_ok.clicked.connect(dialog.accept)
+        btn_ok.setFixedHeight(45) # Tinggi tombol fix
+        btn_ok.setStyleSheet("""
+            QPushButton {
+                background-color: #34495e;
                 color: white;
                 border: none;
                 border-radius: 6px;
-                padding: 6px 18px;
-                font-size: 12px;
-                min-width: 80px;
-                min-height: 28px;
+                font-weight: bold;
+                font-size: 14px;
             }
-
-            QMessageBox QPushButton:hover {
-                background-color: #2980b9;
-            }
-
-            QMessageBox QPushButton:pressed {
-                background-color: #21618c;
-            }
+            QPushButton:hover { background-color: #2c3e50; }
+            QPushButton:pressed { background-color: #27ae60; }
         """)
+        layout.addWidget(btn_ok)
 
-        msg.exec()
+        dialog.exec()

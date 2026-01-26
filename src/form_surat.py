@@ -1,4 +1,5 @@
 import os
+import tempfile 
 from PyQt6.QtWidgets import (QDialog, QFormLayout, QLineEdit, QPushButton, 
                              QVBoxLayout, QLabel, QHBoxLayout, QFileDialog, 
                              QDateEdit, QComboBox, QCompleter, QGroupBox, QFrame)
@@ -14,8 +15,11 @@ class FormTambahSurat(QDialog):
         self.setFixedWidth(500)
         self.file_path = ""
         
-        # Buat ikon panah (disiapkan jika nanti ingin custom arrow)
+        # 1. Buat ikon panah DULUAN sebelum dipakai di stylesheet
         self.create_arrow_icon()
+        
+        # Format path agar bisa dibaca oleh CSS (ganti backslash jadi slash biasa)
+        icon_url = self.arrow_icon_path.replace('\\', '/')
         
         # --- GLOBAL STYLING ---
         self.setStyleSheet(f"""
@@ -31,15 +35,12 @@ class FormTambahSurat(QDialog):
                 min-height: 25px;
             }}
 
-            QLineEdit {{
-                padding: 10px;
-                color: #000000;
-            }}
+            QLineEdit {{ padding: 10px; color: #000000; }}
 
             QComboBox, QDateEdit {{
                 padding: 5px;
                 padding-left: 10px;
-                padding-right: 30px; 
+                padding-right: 30px; /* Ruang untuk ikon panah */
                 color: #000000;
             }}
 
@@ -63,15 +64,34 @@ class FormTambahSurat(QDialog):
                 padding: 5px;
             }}
 
-            QComboBox:editable {{
-                color: #000000;
+            /* --- BAGIAN TOMBOL DROPDOWN (PANAH) --- */
+            
+            /* Kotak tempat panah berada */
+            QComboBox::drop-down, QDateEdit::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: top right;
+                width: 30px;
+                border-left-width: 1px;
+                border-left-color: #bdc3c7;
+                border-left-style: solid;
+                border-top-right-radius: 6px;
+                border-bottom-right-radius: 6px;
+                background: #ecf0f1;
             }}
 
-            QLineEdit:hover, QComboBox:hover, QDateEdit:hover {{
-                color: #000000;
+            QComboBox::drop-down:hover, QDateEdit::drop-down:hover {{
+                background: #d5dbdb;
             }}
 
-            /* GroupBox tanpa “kartu putih” */
+            /* Ikon Panahnya Sendiri */
+            QComboBox::down-arrow, QDateEdit::down-arrow {{
+                image: url({icon_url});
+                width: 12px;
+                height: 12px;
+            }}
+            
+            /* --------------------------------------- */
+
             QGroupBox {{
                 background-color: transparent;
                 border: 1px solid #e0e0e0;
@@ -86,23 +106,6 @@ class FormTambahSurat(QDialog):
                 left: 10px;
                 padding: 0 5px;
                 background: #f4f6f8;
-            }}
-
-            /* Area tombol dropdown */
-            QComboBox::drop-down, QDateEdit::drop-down {{
-                subcontrol-origin: padding;
-                subcontrol-position: top right;
-                width: 25px;
-                border-left-width: 1px;
-                border-left-color: #bdc3c7;
-                border-left-style: solid;
-                border-top-right-radius: 6px;
-                border-bottom-right-radius: 6px;
-                background: #ecf0f1;
-            }}
-
-            QComboBox::drop-down:hover, QDateEdit::drop-down:hover {{
-                background: #d5dbdb;
             }}
         """)
 
@@ -221,14 +224,11 @@ class FormTambahSurat(QDialog):
 
     def create_arrow_icon(self):
         """Membuat ikon panah dropdown menggunakan SVG"""
-        from PyQt6.QtSvg import QSvgRenderer
-        from PyQt6.QtGui import QPixmap, QPainter
-        import tempfile
         
-        # SVG untuk panah ke bawah (segitiga)
+        # SVG untuk panah ke bawah (segitiga sederhana warna abu gelap)
         svg_data = """<?xml version="1.0" encoding="UTF-8"?>
         <svg width="16" height="16" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-            <polygon points="4,6 12,6 8,11" fill="#2c3e50"/>
+            <path d="M4 6 L8 10 L12 6" stroke="#57606f" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>"""
         
         # Simpan sebagai file sementara
