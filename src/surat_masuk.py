@@ -14,8 +14,8 @@ from .settings import get_folder_path, set_folder_path
 class SuratMasuk(QWidget):
     def __init__(self):
         super().__init__()
-        self.all_data = []      # Data asli dari DB
-        self.filtered_data = [] # Data filter
+        self.all_data = []      
+        self.filtered_data = [] 
         self.current_page = 1
         self.rows_per_page = 10
         self.init_ui()
@@ -27,25 +27,20 @@ class SuratMasuk(QWidget):
 
         # --- HEADER ---
         header_layout = QHBoxLayout()
-        
-        # Container untuk Judul dan Info Folder
         judul_container = QVBoxLayout()
         
         title = QLabel("📥 Manajemen Surat Masuk")
         title.setStyleSheet("font-size: 22px; font-weight: bold; color: #2d3436;")
         
-        # WIDGET BARU: Label Info Folder
         self.lbl_folder = QLabel()
         self.lbl_folder.setStyleSheet("color: #636e72; font-size: 12px; font-style: italic;")
-        self.update_label_folder() # Panggil fungsi update text
+        self.update_label_folder()
         
         judul_container.addWidget(title)
         judul_container.addWidget(self.lbl_folder)
-        
         header_layout.addLayout(judul_container)
         header_layout.addStretch()
 
-        # WIDGET BARU: Tombol Ganti Folder
         self.btn_ganti_folder = QPushButton("📂 Ganti Folder")
         self.btn_ganti_folder.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_ganti_folder.setStyleSheet("""
@@ -83,32 +78,64 @@ class SuratMasuk(QWidget):
         self.search_input.textChanged.connect(self.filter_data)
         self.main_layout.addWidget(self.search_input)
 
-        # --- TABLE (8 KOLOM) ---
+        # --- TABLE ---
         self.table = QTableWidget()
         self.table.setColumnCount(8)
         self.table.setHorizontalHeaderLabels([
             "NO", "TANGGAL\nTERIMA", "DARI", "NOMOR", "TANGGAL\nSURAT", "PERIHAL", "KET", "AKSI"
         ])
+        
+        # Pengaturan Header Vertikal (Agar baris bisa tinggi otomatis)
         self.table.verticalHeader().setVisible(False)
+        self.table.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
+        
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.table.setShowGrid(False)
+        
+        # Word Wrap & Elide Mode (Teks turun ke bawah, jangan dipotong "...")
+        self.table.setWordWrap(True) 
+        self.table.setTextElideMode(Qt.TextElideMode.ElideNone)
 
         header = self.table.horizontalHeader()
         header.setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents) # NO
-        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents) # TGL TERIMA
-        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents) # TGL SURAT
-        header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents) # AKSI
+        header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(7, QHeaderView.ResizeMode.Fixed)
+        self.table.setColumnWidth(7, 170)
         
+        # --- PERBAIKAN CSS TOOLTIP DI SINI ---
         self.table.setStyleSheet("""
-            QTableWidget { background-color: white; color: #2d3436; border: none; outline: none; }
-            QHeaderView::section { 
-                background-color: #7132CA; color: white; padding: 12px; 
-                font-weight: bold; border: none; text-transform: uppercase;
+            QTableWidget { 
+                background-color: white; 
+                color: #2d3436; 
+                border: none; 
+                outline: none; 
             }
-            QTableWidget::item:selected { background-color: #C47BE4; color: white; }
-            QTableWidget::item { padding: 10px; border-bottom: 1px solid #f1f2f6; }
+            QHeaderView::section { 
+                background-color: #7132CA; 
+                color: white; 
+                padding: 12px; 
+                font-weight: bold; 
+                border: none; 
+                text-transform: uppercase;
+            }
+            QTableWidget::item:selected { 
+                background-color: #C47BE4; 
+                color: white; 
+            }
+            QTableWidget::item { 
+                padding: 8px; 
+                border-bottom: 1px solid #f1f2f6; 
+            }
+            
+            /* --- WARNA TOOLTIP (POPUP TEXT) --- */
+            QToolTip { 
+                color: #000000; 
+                background-color: #ffffff; 
+                border: 1px solid #bdc3c7; 
+            }
         """)
         self.main_layout.addWidget(self.table)
 
@@ -146,10 +173,8 @@ class SuratMasuk(QWidget):
         bottom_layout.addWidget(self.btn_excel)
         bottom_layout.addStretch()
         self.main_layout.addLayout(bottom_layout)
-
+        
         self.load_data()
-
-    # --- FUNGSI PENDUKUNG (Dipisah dari init_ui) ---
 
     def update_label_folder(self):
         path = get_folder_path("masuk")
@@ -167,7 +192,6 @@ class SuratMasuk(QWidget):
             db = connect_db()
             if db:
                 cursor = db.cursor()
-                # 0:id, 1:tgl_terima, 2:dari, 3:nomor, 4:tgl_surat, 5:perihal, 6:ket, 7:path
                 cursor.execute("""
                     SELECT id, tanggal, asal_surat, nomor_surat, tanggal_surat, judul_surat, keterangan, file_path 
                     FROM surat WHERE kategori='masuk' ORDER BY id DESC
@@ -194,44 +218,51 @@ class SuratMasuk(QWidget):
         for i, row in enumerate(page_data):
             self.table.insertRow(i)
             
+            # Kolom No
             no_item = QTableWidgetItem(str(start_idx + i + 1))
             no_item.setData(Qt.ItemDataRole.UserRole, row[0])
-            no_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
+            no_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop) 
             self.table.setItem(i, 0, no_item)
 
+            # Kolom Data (1-6)
             for j in range(1, 7):
                 val = str(row[j]) if row[j] else ""
-                if j in [1, 4]:
+                if j in [1, 4]: 
                     try:
                         d = QDate.fromString(val, "yyyy-MM-dd")
                         if d.isValid(): val = d.toString("dd/MM/yyyy")
                     except: pass
+                
                 item = QTableWidgetItem(val)
-                item.setTextAlignment(Qt.AlignmentFlag.AlignVCenter)
+                item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
+                item.setToolTip(val) # Munculkan popup saat hover
                 self.table.setItem(i, j, item)
             
-            # --- AKSI ---
+            # Kolom Aksi
             btn_container = QWidget()
             btn_container.setStyleSheet("background: transparent;")
             btn_l = QHBoxLayout(btn_container)
-            btn_l.setContentsMargins(10, 5, 10, 5)
-            btn_l.setSpacing(15)
+            btn_l.setContentsMargins(5, 5, 5, 5)
+            btn_l.setSpacing(5)
+            btn_l.setAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
             
             btn_view = QPushButton("Lihat")
+            btn_view.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_view.setStyleSheet("""
                 QPushButton {
                     background: #5c7cfa; color: white; border-radius: 4px; 
-                    padding: 6px 12px; font-weight: bold; min-width: 30px;
+                    padding: 5px 10px; font-weight: bold; font-size: 11px;
                 }
                 QPushButton:hover { background: #4263eb; }
             """)
             btn_view.clicked.connect(lambda checked, p=row[7]: self.buka_berkas(p))
             
-            btn_edit = QPushButton("✏️")
+            btn_edit = QPushButton("✏️ Edit")
+            btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
             btn_edit.setStyleSheet("""
                 QPushButton {
                     background: #f1c40f; color: white; border-radius: 4px; 
-                    padding: 6px; min-width: 40px;
+                    padding: 5px 10px; font-weight: bold; font-size: 11px;
                 }
                 QPushButton:hover { background: #f39c12; }
             """)
@@ -240,9 +271,11 @@ class SuratMasuk(QWidget):
             btn_l.addWidget(btn_view)
             btn_l.addWidget(btn_edit)
             self.table.setCellWidget(i, 7, btn_container)
-            self.table.setRowHeight(i, 55)
+        
+        # Pastikan baris melebarkan diri
+        self.table.resizeRowsToContents() 
         self.table.setSortingEnabled(True)
-
+        
     def filter_data(self):
         text = self.search_input.text().lower()
         self.filtered_data = [d for d in self.all_data if 
@@ -277,20 +310,16 @@ class SuratMasuk(QWidget):
     def aksi_tambah(self):
         dialog = FormTambahSurat(self, kategori="Masuk")
         if dialog.exec():
-            # Urutan di form: ent_tanggal(terima), ent_pihak(dari), ent_nomor, ent_tgl_surat, ent_perihal, ent_keterangan
             tgl_terima = dialog.ent_tanggal.date().toString("yyyy-MM-dd")
             dari = dialog.ent_pihak.text().strip()
             nomor = dialog.ent_nomor.text().strip()
             tgl_surat = dialog.ent_tgl_surat.date().toString("yyyy-MM-dd")
             
-            # --- LOGIKA PEMBERSIHAN KODE ---
             raw_perihal = dialog.ent_perihal.currentText().strip()
             if " - " in raw_perihal:
-                # Ambil bagian kiri (Judul), buang kanan (Kode)
                 perihal = raw_perihal.rsplit(" - ", 1)[0]
             else:
                 perihal = raw_perihal
-            # -------------------------------
             
             ket = dialog.ent_keterangan.text().strip()
             path_asal = dialog.file_path
@@ -300,28 +329,21 @@ class SuratMasuk(QWidget):
                 return
 
             try:
-                # --- PERUBAHAN DI SINI ---
-                # Mengambil path dinamis dari settings
                 up_dir = get_folder_path("masuk") 
-                
-                # Pastikan folder tersebut ada (buat jika belum ada)
                 os.makedirs(up_dir, exist_ok=True)
                 
-                # Proses Copy File
                 ext = os.path.splitext(path_asal)[1]
                 nama_file_baru = f"IN_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
                 path_dest = os.path.join(up_dir, nama_file_baru)
                 
                 shutil.copy(path_asal, path_dest)
                 
-                # Simpan PATH LENGKAP ke database agar file tetap bisa dibuka
-                # meskipun folder dipindah-pindah
                 db = connect_db()
                 cursor = db.cursor()
                 cursor.execute("""
                     INSERT INTO surat (nomor_surat, judul_surat, asal_surat, kategori, tanggal, tanggal_surat, keterangan, file_path) 
                     VALUES (?, ?, ?, 'masuk', ?, ?, ?, ?)
-                """, (nomor, perihal, dari, tgl_terima, tgl_surat, ket, path_dest)) # Gunakan path_dest (path lengkap)
+                """, (nomor, perihal, dari, tgl_terima, tgl_surat, ket, path_dest))
                 
                 db.commit()
                 db.close()
@@ -334,10 +356,8 @@ class SuratMasuk(QWidget):
         dialog = FormTambahSurat(self, kategori="Masuk")
         dialog.setWindowTitle("Edit Surat Masuk")
         
-        # Simpan path lama untuk perbandingan nanti
         path_lama = data[7] 
         
-        # Mengisi form dengan data lama
         dialog.ent_tanggal.setDate(QDate.fromString(data[1], "yyyy-MM-dd"))
         dialog.ent_pihak.setText(str(data[2]))
         dialog.ent_nomor.setText(str(data[3]))
@@ -348,39 +368,26 @@ class SuratMasuk(QWidget):
 
         if dialog.exec():
             try:
-                # --- 1. Logika Pembersihan Judul ---
                 raw_perihal = dialog.ent_perihal.currentText().strip()
                 if " - " in raw_perihal:
                     perihal = raw_perihal.rsplit(" - ", 1)[0]
                 else:
                     perihal = raw_perihal
                 
-                # --- 2. Logika Pemindahan File (Jika Berubah) ---
                 path_baru_input = dialog.file_path
-                final_path = path_lama # Defaultnya pakai path lama
+                final_path = path_lama
 
-                # Jika user memilih file baru (path berbeda dengan database)
                 if path_baru_input != path_lama:
-                    # Ambil folder tujuan saat ini
                     up_dir = get_folder_path("masuk")
                     os.makedirs(up_dir, exist_ok=True)
                     
-                    # Buat nama file unik baru
                     ext = os.path.splitext(path_baru_input)[1]
-                    # Tambahkan penanda 'EDIT' agar mudah dilacak
                     nama_file_baru = f"IN_EDIT_{datetime.now().strftime('%Y%m%d_%H%M%S')}{ext}"
                     path_dest = os.path.join(up_dir, nama_file_baru)
                     
-                    # Salin file ke folder arsip
                     shutil.copy(path_baru_input, path_dest)
                     final_path = path_dest
-                    
-                    # (Opsional) Hapus file lama jika ingin hemat memori
-                    # if path_lama and os.path.exists(path_lama):
-                    #    try: os.remove(path_lama)
-                    #    except: pass
 
-                # --- 3. Update Database ---
                 db = connect_db()
                 cursor = db.cursor()
                 
@@ -394,7 +401,7 @@ class SuratMasuk(QWidget):
                     dialog.ent_tgl_surat.date().toString("yyyy-MM-dd"), 
                     perihal, 
                     dialog.ent_keterangan.text(), 
-                    final_path, # Gunakan path yang sudah dipastikan di folder arsip
+                    final_path,
                     data[0]
                 ))
 
@@ -411,7 +418,6 @@ class SuratMasuk(QWidget):
             self.notifikasi_custom("Peringatan", "Pilih data yang ingin dihapus!", QMessageBox.Icon.Warning)
             return
             
-        # 1. Ambil ID dari UserRole kolom pertama
         db_id = self.table.item(row, 0).data(Qt.ItemDataRole.UserRole)
         
         msg = QMessageBox(self)
@@ -419,38 +425,16 @@ class SuratMasuk(QWidget):
         msg.setText("Apakah Anda yakin? Data dan file fisik akan dihapus permanen.")
         msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
-        # Style dasar dialog
         msg.setStyleSheet("""
-            QMessageBox { 
-                background-color: #ffffff; 
-            }
-
-            QMessageBox QLabel { 
-                background: transparent;
-                color: #000000; 
-                font-size: 13px; 
-                padding: 6px 4px;
-            }
-
-            QMessageBox QPushButton { 
-                min-width: 90px; 
-                min-height: 30px;
-                border-radius: 6px;
-                font-size: 12px;
-                border: none;
-                padding: 6px 14px;
-                color: white;
-            }
+            QMessageBox { background-color: #ffffff; }
+            QMessageBox QLabel { background: transparent; color: #000000; font-size: 13px; padding: 6px 4px; }
+            QMessageBox QPushButton { min-width: 90px; min-height: 30px; border-radius: 6px; font-size: 12px; border: none; padding: 6px 14px; color: white; }
         """)
 
-        # Ambil tombol secara eksplisit (aman di semua bahasa OS)
         btn_yes = msg.button(QMessageBox.StandardButton.Yes)
         btn_no  = msg.button(QMessageBox.StandardButton.No)
-
-        # Styling langsung
         btn_yes.setStyleSheet("background-color: #27ae60;")
         btn_yes.setCursor(Qt.CursorShape.PointingHandCursor)
-
         btn_no.setStyleSheet("background-color: #e74c3c;")
         btn_no.setCursor(Qt.CursorShape.PointingHandCursor)
 
@@ -458,21 +442,17 @@ class SuratMasuk(QWidget):
             try:
                 db = connect_db()
                 cursor = db.cursor()
-
-                # 2. Ambil path file sebelum data dihapus
                 cursor.execute("SELECT file_path FROM surat WHERE id=?", (db_id,))
                 result = cursor.fetchone()
                 
                 if result:
                     path_file = result[0]
-                    # 3. Hapus file fisik jika ada
                     if path_file and os.path.exists(path_file):
                         try:
                             os.remove(path_file)
                         except Exception as e:
                             print(f"Gagal menghapus file fisik: {e}")
 
-                # 4. Hapus data dari database
                 cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
                 db.commit()
                 db.close()
@@ -487,81 +467,50 @@ class SuratMasuk(QWidget):
         else: self.notifikasi_custom("Error", "File tidak ditemukan!", QMessageBox.Icon.Critical)
 
     def notifikasi_custom(self, judul, pesan, ikon):
-        # --- MEMBUAT DIALOG CUSTOM (Agar posisi benar-benar di tengah) ---
         dialog = QDialog(self)
         dialog.setWindowTitle("Pemberitahuan")
         dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
-        dialog.setFixedWidth(380) # Lebar fix agar proporsional
+        dialog.setFixedWidth(380)
         dialog.setStyleSheet("background-color: white; border-radius: 8px;")
         
-        # Layout utama vertikal
         layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(25, 25, 25, 25) # Margin sekeliling
-        layout.setSpacing(10) # Jarak antar elemen
+        layout.setContentsMargins(25, 25, 25, 25)
+        layout.setSpacing(10)
         
-        # 1. Tentukan Icon & Warna
         emoji = "✅" 
-        warna_judul = "#27ae60" # Hijau Sukses
+        warna_judul = "#27ae60"
         
         if ikon == QMessageBox.Icon.Warning:
-            emoji = "⚠️"
-            warna_judul = "#f39c12" # Kuning Peringatan
+            emoji = "⚠️"; warna_judul = "#f39c12"
         elif ikon == QMessageBox.Icon.Critical:
-            emoji = "❌"
-            warna_judul = "#c0392b" # Merah Error
+            emoji = "❌"; warna_judul = "#c0392b"
         elif ikon == QMessageBox.Icon.Question:
-            emoji = "❓"
-            warna_judul = "#3498db" # Biru Tanya
+            emoji = "❓"; warna_judul = "#3498db"
 
-        # 2. Widget Icon (Emoji)
         lbl_icon = QLabel(emoji)
         lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lbl_icon.setStyleSheet("font-size: 55px; border: none; background: transparent;")
         layout.addWidget(lbl_icon)
         
-        # 3. Widget Judul
         lbl_judul = QLabel(judul.upper())
         lbl_judul.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_judul.setStyleSheet(f"""
-            font-size: 20px; 
-            font-weight: 900; 
-            color: {warna_judul}; 
-            border: none; 
-            background: transparent;
-            margin-top: 5px;
-        """)
+        lbl_judul.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {warna_judul}; border: none; background: transparent; margin-top: 5px;")
         layout.addWidget(lbl_judul)
         
-        # 4. Widget Pesan
         lbl_pesan = QLabel(pesan)
         lbl_pesan.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_pesan.setWordWrap(True) # Agar text panjang turun ke bawah otomatis
-        lbl_pesan.setStyleSheet("""
-            font-size: 13px; 
-            color: #57606f; 
-            line-height: 1.4; 
-            border: none; 
-            background: transparent;
-        """)
+        lbl_pesan.setWordWrap(True)
+        lbl_pesan.setStyleSheet("font-size: 13px; color: #57606f; line-height: 1.4; border: none; background: transparent;")
         layout.addWidget(lbl_pesan)
         
-        # Spasi sebelum tombol
         layout.addSpacing(15)
 
-        # 5. Tombol OK (Full Width)
         btn_ok = QPushButton("OK")
         btn_ok.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_ok.clicked.connect(dialog.accept)
-        btn_ok.setFixedHeight(45) # Tinggi tombol fix
+        btn_ok.setFixedHeight(45)
         btn_ok.setStyleSheet("""
-            QPushButton {
-                background-color: #34495e;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                font-weight: bold;
-                font-size: 14px;
-            }
+            QPushButton { background-color: #34495e; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; }
             QPushButton:hover { background-color: #2c3e50; }
             QPushButton:pressed { background-color: #27ae60; }
         """)
