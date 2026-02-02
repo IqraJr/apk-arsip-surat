@@ -155,6 +155,11 @@ class FormTambahSurat(QDialog):
         self.ent_perihal.completer().setCompletionMode(QCompleter.CompletionMode.PopupCompletion)
         self.ent_perihal.completer().setFilterMode(Qt.MatchFlag.MatchContains) 
         self.ent_perihal.completer().setCaseSensitivity(Qt.CaseSensitivity.CaseInsensitive) 
+        
+        # --- FITUR BARU: AUTO FILL NOMOR SURAT ---
+        self.ent_perihal.currentTextChanged.connect(self.otomatis_isi_kode)
+        # -----------------------------------------
+        
         self.load_kode_surat() 
 
         # 4. Nomor Surat
@@ -337,3 +342,16 @@ class FormTambahSurat(QDialog):
                 self.ent_perihal.addItem(f"{ket} - {kode}")
             db.close()
         except Exception as e: print(e)
+
+    def otomatis_isi_kode(self, text):
+        """
+        Mengisi kolom Nomor Surat secara otomatis dengan KODE
+        ketika user memilih perihal dari dropdown.
+        Format text: "Keterangan - KODE"
+        """
+        if " - " in text:
+            # Ambil bagian kanan (KODE), pisahkan berdasarkan " - " terakhir
+            kode = text.split(" - ")[-1]
+            
+            # Isi ke form nomor surat
+            self.ent_nomor.setText(kode)
