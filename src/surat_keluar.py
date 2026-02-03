@@ -12,6 +12,25 @@ from .db_manager import connect_db
 from .form_surat import FormTambahSurat
 from .settings import get_folder_path, set_folder_path
 
+# --- CLASS SORTING ANGKA ---
+class NumericTableWidgetItem(QTableWidgetItem):
+    def __lt__(self, other):
+        try:
+            return float(self.text()) < float(other.text())
+        except ValueError:
+            return super().__lt__(other)
+
+# --- CLASS SORTING TANGGAL ---
+class DateTableWidgetItem(QTableWidgetItem):
+    def __lt__(self, other):
+        try:
+            date_self = QDate.fromString(self.text(), "dd/MM/yyyy")
+            date_other = QDate.fromString(other.text(), "dd/MM/yyyy")
+            return date_self < date_other
+        except:
+            return super().__lt__(other)
+# -----------------------------
+
 class SuratKeluar(QWidget):
     def __init__(self):
         super().__init__()
@@ -317,7 +336,7 @@ class SuratKeluar(QWidget):
         for i, row in enumerate(page_data):
             self.table.insertRow(i)
             
-            # --- KOLOM 0: CHECKBOX ---
+            # 0. Checkbox
             dummy_item = QTableWidgetItem()
             dummy_item.setFlags(Qt.ItemFlag.ItemIsEnabled) 
             self.table.setItem(i, 0, dummy_item)
@@ -334,43 +353,45 @@ class SuratKeluar(QWidget):
             
             chk_box.setStyleSheet(f"""
                 QCheckBox::indicator {{
-                    width: 18px;
-                    height: 18px;
-                    border: 1px solid #bdc3c7;
-                    background-color: white;
-                    border-radius: 3px;
+                    width: 18px; height: 18px;
+                    border: 1px solid #bdc3c7; background-color: white; border-radius: 3px;
                 }}
                 QCheckBox::indicator:checked {{
-                    background-color: #27ae60;
-                    border: 1px solid #27ae60;
+                    background-color: #27ae60; border: 1px solid #27ae60;
                     image: url({self.check_icon_path});
                 }}
             """)
-            
             chk_layout.addWidget(chk_box)
             self.table.setCellWidget(i, 0, chk_container)
 
-            # --- KOLOM 1: NO ---
-            no_item = QTableWidgetItem(str(start_idx + i + 1))
+            # 1. No (Numeric)
+            no_item = NumericTableWidgetItem(str(start_idx + i + 1))
             no_item.setData(Qt.ItemDataRole.UserRole, row[0])
-            no_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
+            no_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop) 
             self.table.setItem(i, 1, no_item)
 
-            # --- KOLOM DATA (2-7) ---
+            # Data 2-7
             for j in range(1, 7):
                 val = str(row[j]) if row[j] else ""
-                if j in [1, 4]:
+                
+                if j in [1, 4]: 
                     try:
                         d = QDate.fromString(val, "yyyy-MM-dd")
                         if d.isValid(): val = d.toString("dd/MM/yyyy")
                     except: pass
                 
-                item = QTableWidgetItem(val)
+                # --- SORTING TANGGAL ---
+                if j in [1, 4]:
+                    item = DateTableWidgetItem(val)
+                else:
+                    item = QTableWidgetItem(val)
+                # -----------------------
+                
                 item.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignTop)
                 item.setToolTip(val)
                 self.table.setItem(i, j+1, item)
             
-            # --- KOLOM 8: AKSI ---
+            # 8. Aksi
             btn_container = QWidget()
             btn_container.setStyleSheet("background: transparent;")
             btn_l = QHBoxLayout(btn_container)
@@ -404,33 +425,9 @@ class SuratKeluar(QWidget):
             btn_l.addWidget(btn_edit)
             self.table.setCellWidget(i, 8, btn_container)
         
-        self.table.resizeRowsToContents()
+        self.table.resizeRowsToContents() 
         self.table.setSortingEnabled(True)
-
-    def filter_data(self, *args):
-        keyword = self.search_input.text().lower()
-        selected_tahun = self.combo_tahun.currentText()
         
-        self.filtered_data = []
-        
-        for row in self.all_data:
-            text_data = f"{row[2]} {row[3]} {row[5]} {row[6]}".lower() # Kepada, Nomor, Perihal, Ket
-            
-            row_tahun = ""
-            val_tgl = str(row[1]) if row[1] else ""
-            if val_tgl and "-" in val_tgl:
-                try: row_tahun = val_tgl.split("-")[0]
-                except: pass
-            
-            match_keyword = keyword in text_data
-            match_tahun = (selected_tahun == "Semua Tahun") or (selected_tahun == row_tahun)
-            
-            if match_keyword and match_tahun:
-                self.filtered_data.append(row)
-                
-        self.current_page = 1
-        self.display_data(self.filtered_data)
-
     def prev_page(self):
         if self.current_page > 1:
             self.current_page -= 1
@@ -557,6 +554,7 @@ class SuratKeluar(QWidget):
                 self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
                 
     def aksi_hapus(self):
+        # 1. Cari ID dari checkbox yang dicentang
         ids_to_delete = []
         for i in range(self.table.rowCount()):
             widget = self.table.cellWidget(i, 0)
@@ -565,35 +563,94 @@ class SuratKeluar(QWidget):
                 if chk and chk.isChecked():
                     ids_to_delete.append(chk.property("db_id"))
 
+        # Jika tidak ada yang dipilih
         if not ids_to_delete:
             self.notifikasi_custom("Peringatan", "Pilih (centang) data yang ingin dihapus!", QMessageBox.Icon.Warning)
             return
             
-        msg = QMessageBox(self)
-        msg.setWindowTitle("Konfirmasi Hapus")
-        msg.setText(f"Yakin menghapus {len(ids_to_delete)} data terpilih?\nData dan file fisik akan dihapus permanen.")
-        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+        # --- MEMBUAT CUSTOM DIALOG KONFIRMASI ---
+        dialog = QDialog(self)
+        dialog.setWindowTitle("Konfirmasi Hapus")
+        dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
+        dialog.setFixedWidth(400)
+        dialog.setStyleSheet("background-color: white; border-radius: 8px;")
+        
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(10)
+        
+        # 1. Ikon Sampah Besar
+        lbl_icon = QLabel("🗑️")
+        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_icon.setStyleSheet("font-size: 60px; border: none; background: transparent;")
+        layout.addWidget(lbl_icon)
+        
+        # 2. Judul
+        lbl_judul = QLabel("HAPUS DATA?")
+        lbl_judul.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_judul.setStyleSheet("font-size: 22px; font-weight: 900; color: #c0392b; border: none; background: transparent; margin-top: 5px;")
+        layout.addWidget(lbl_judul)
+        
+        # 3. Pesan (Jumlah Data)
+        lbl_pesan = QLabel(f"Anda akan menghapus <b>{len(ids_to_delete)} data</b> terpilih.<br>Data dan file fisik akan hilang permanen.")
+        lbl_pesan.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        lbl_pesan.setWordWrap(True)
+        lbl_pesan.setStyleSheet("font-size: 14px; color: #57606f; line-height: 1.4; border: none; background: transparent;")
+        layout.addWidget(lbl_pesan)
+        
+        layout.addSpacing(15)
 
-        msg.setStyleSheet("""
-            QMessageBox { background-color: #ffffff; }
-            QMessageBox QLabel { background: transparent; color: #000000; font-size: 13px; padding: 6px 4px; }
-            QMessageBox QPushButton { min-width: 90px; min-height: 30px; border-radius: 6px; font-size: 12px; border: none; padding: 6px 14px; color: white; }
+        # 4. Tombol Aksi (Horizontal Layout)
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(10)
+        
+        # Tombol Batal (Abu-abu/Netral)
+        btn_batal = QPushButton("Batal")
+        btn_batal.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_batal.setFixedHeight(40)
+        btn_batal.setStyleSheet("""
+            QPushButton {
+                background-color: #ecf0f1; 
+                color: #2c3e50; 
+                border: 1px solid #bdc3c7; 
+                border-radius: 6px; 
+                font-weight: bold; 
+                font-size: 14px;
+            }
+            QPushButton:hover { background-color: #dfe6e9; }
         """)
+        btn_batal.clicked.connect(dialog.reject) # Tutup dialog (return False)
+        
+        # Tombol Hapus (Merah - Indikasi Bahaya)
+        btn_hapus = QPushButton("Ya, Hapus")
+        btn_hapus.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_hapus.setFixedHeight(40)
+        btn_hapus.setStyleSheet("""
+            QPushButton {
+                background-color: #e74c3c; 
+                color: white; 
+                border: none; 
+                border-radius: 6px; 
+                font-weight: bold; 
+                font-size: 14px;
+            }
+            QPushButton:hover { background-color: #c0392b; }
+        """)
+        btn_hapus.clicked.connect(dialog.accept) # Lanjut hapus (return True)
+        
+        btn_layout.addWidget(btn_batal)
+        btn_layout.addWidget(btn_hapus)
+        layout.addLayout(btn_layout)
 
-        btn_yes = msg.button(QMessageBox.StandardButton.Yes)
-        btn_no  = msg.button(QMessageBox.StandardButton.No)
-        btn_yes.setStyleSheet("background-color: #27ae60;")
-        btn_yes.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_no.setStyleSheet("background-color: #e74c3c;")
-        btn_no.setCursor(Qt.CursorShape.PointingHandCursor)
-
-        if msg.exec() == QMessageBox.StandardButton.Yes:
+        # --- EKSEKUSI JIKA USER KLIK "YA, HAPUS" ---
+        if dialog.exec(): 
             try:
                 db = connect_db()
                 cursor = db.cursor()
 
                 success_count = 0
                 for db_id in ids_to_delete:
+                    # Ambil path file
                     cursor.execute("SELECT file_path FROM surat WHERE id=?", (db_id,))
                     result = cursor.fetchone()
                     
@@ -605,6 +662,7 @@ class SuratKeluar(QWidget):
                             except Exception as e:
                                 print(f"Gagal menghapus file fisik: {e}")
 
+                    # Hapus data dari DB
                     cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
                     success_count += 1
 
@@ -615,7 +673,7 @@ class SuratKeluar(QWidget):
                 self.notifikasi_custom("Berhasil", f"{success_count} data berhasil dihapus!", QMessageBox.Icon.Information)
             except Exception as e:
                 self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
-
+                
     def buka_berkas(self, path):
         if path and os.path.exists(path): os.startfile(os.path.abspath(path))
         else: self.notifikasi_custom("Error", "File tidak ditemukan!", QMessageBox.Icon.Critical)
