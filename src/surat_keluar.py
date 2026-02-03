@@ -174,15 +174,37 @@ class SuratKeluar(QWidget):
         header.setSectionResizeMode(8, QHeaderView.ResizeMode.Fixed) # AKSI
         self.table.setColumnWidth(8, 170)
         
+        # --- CSS DENGAN GARIS PEMISAH KOLOM (border-right) ---
         self.table.setStyleSheet("""
-            QTableWidget { background-color: white; color: #2d3436; border: none; outline: none; }
-            QHeaderView::section { 
-                background-color: #7132CA; color: white; padding: 12px; 
-                font-weight: bold; border: none; text-transform: uppercase;
+            QTableWidget { 
+                background-color: white; 
+                color: #2d3436; 
+                border: none; 
+                outline: none; 
             }
-            QTableWidget::item { padding: 8px; border-bottom: 1px solid #f1f2f6; }
-            QTableWidget::item:selected { background-color: #d1ecf1; color: #0c5460; }
-            QToolTip { color: #000000; background-color: #ffffff; border: 1px solid #bdc3c7; }
+            QHeaderView::section { 
+                background-color: #7132CA; 
+                color: white; 
+                padding: 12px; 
+                font-weight: bold; 
+                border: none; 
+                text-transform: uppercase;
+                border-right: 1px solid #9b59b6; /* Garis tipis antar header */
+            }
+            QTableWidget::item { 
+                padding: 8px; 
+                border-bottom: 1px solid #f1f2f6; /* Garis bawah baris */
+                border-right: 1px solid #e0e0e0;  /* Garis kanan (pemisah kolom) */
+            }
+            QTableWidget::item:selected { 
+                background-color: #d1ecf1; 
+                color: #0c5460; 
+            }
+            QToolTip { 
+                color: #000000; 
+                background-color: #ffffff; 
+                border: 1px solid #bdc3c7; 
+            }
         """)
         self.main_layout.addWidget(self.table)
 
@@ -497,7 +519,7 @@ class SuratKeluar(QWidget):
         dialog = FormTambahSurat(self, kategori="Keluar")
         dialog.setWindowTitle("Edit Surat Keluar")
         
-        path_lama = data[7]
+        path_lama = data[7] 
         
         dialog.ent_tanggal.setDate(QDate.fromString(data[1], "yyyy-MM-dd"))
         dialog.ent_pihak.setText(str(data[2]))
@@ -540,7 +562,7 @@ class SuratKeluar(QWidget):
                     dialog.ent_pihak.text(), 
                     dialog.ent_nomor.text(), 
                     dialog.ent_tgl_surat.date().toString("yyyy-MM-dd"), 
-                    perihal,
+                    perihal, 
                     dialog.ent_keterangan.text(), 
                     final_path, 
                     data[0]
@@ -554,7 +576,6 @@ class SuratKeluar(QWidget):
                 self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
                 
     def aksi_hapus(self):
-        # 1. Cari ID dari checkbox yang dicentang
         ids_to_delete = []
         for i in range(self.table.rowCount()):
             widget = self.table.cellWidget(i, 0)
@@ -563,94 +584,35 @@ class SuratKeluar(QWidget):
                 if chk and chk.isChecked():
                     ids_to_delete.append(chk.property("db_id"))
 
-        # Jika tidak ada yang dipilih
         if not ids_to_delete:
             self.notifikasi_custom("Peringatan", "Pilih (centang) data yang ingin dihapus!", QMessageBox.Icon.Warning)
             return
             
-        # --- MEMBUAT CUSTOM DIALOG KONFIRMASI ---
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Konfirmasi Hapus")
-        dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
-        dialog.setFixedWidth(400)
-        dialog.setStyleSheet("background-color: white; border-radius: 8px;")
-        
-        layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(10)
-        
-        # 1. Ikon Sampah Besar
-        lbl_icon = QLabel("🗑️")
-        lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_icon.setStyleSheet("font-size: 60px; border: none; background: transparent;")
-        layout.addWidget(lbl_icon)
-        
-        # 2. Judul
-        lbl_judul = QLabel("HAPUS DATA?")
-        lbl_judul.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_judul.setStyleSheet("font-size: 22px; font-weight: 900; color: #c0392b; border: none; background: transparent; margin-top: 5px;")
-        layout.addWidget(lbl_judul)
-        
-        # 3. Pesan (Jumlah Data)
-        lbl_pesan = QLabel(f"Anda akan menghapus <b>{len(ids_to_delete)} data</b> terpilih.<br>Data dan file fisik akan hilang permanen.")
-        lbl_pesan.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_pesan.setWordWrap(True)
-        lbl_pesan.setStyleSheet("font-size: 14px; color: #57606f; line-height: 1.4; border: none; background: transparent;")
-        layout.addWidget(lbl_pesan)
-        
-        layout.addSpacing(15)
+        msg = QMessageBox(self)
+        msg.setWindowTitle("Konfirmasi Hapus")
+        msg.setText(f"Yakin menghapus {len(ids_to_delete)} data terpilih?\nData dan file fisik akan dihapus permanen.")
+        msg.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
 
-        # 4. Tombol Aksi (Horizontal Layout)
-        btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(10)
-        
-        # Tombol Batal (Abu-abu/Netral)
-        btn_batal = QPushButton("Batal")
-        btn_batal.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_batal.setFixedHeight(40)
-        btn_batal.setStyleSheet("""
-            QPushButton {
-                background-color: #ecf0f1; 
-                color: #2c3e50; 
-                border: 1px solid #bdc3c7; 
-                border-radius: 6px; 
-                font-weight: bold; 
-                font-size: 14px;
-            }
-            QPushButton:hover { background-color: #dfe6e9; }
+        msg.setStyleSheet("""
+            QMessageBox { background-color: #ffffff; }
+            QMessageBox QLabel { background: transparent; color: #000000; font-size: 13px; padding: 6px 4px; }
+            QMessageBox QPushButton { min-width: 90px; min-height: 30px; border-radius: 6px; font-size: 12px; border: none; padding: 6px 14px; color: white; }
         """)
-        btn_batal.clicked.connect(dialog.reject) # Tutup dialog (return False)
-        
-        # Tombol Hapus (Merah - Indikasi Bahaya)
-        btn_hapus = QPushButton("Ya, Hapus")
-        btn_hapus.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_hapus.setFixedHeight(40)
-        btn_hapus.setStyleSheet("""
-            QPushButton {
-                background-color: #e74c3c; 
-                color: white; 
-                border: none; 
-                border-radius: 6px; 
-                font-weight: bold; 
-                font-size: 14px;
-            }
-            QPushButton:hover { background-color: #c0392b; }
-        """)
-        btn_hapus.clicked.connect(dialog.accept) # Lanjut hapus (return True)
-        
-        btn_layout.addWidget(btn_batal)
-        btn_layout.addWidget(btn_hapus)
-        layout.addLayout(btn_layout)
 
-        # --- EKSEKUSI JIKA USER KLIK "YA, HAPUS" ---
-        if dialog.exec(): 
+        btn_yes = msg.button(QMessageBox.StandardButton.Yes)
+        btn_no  = msg.button(QMessageBox.StandardButton.No)
+        btn_yes.setStyleSheet("background-color: #27ae60;")
+        btn_yes.setCursor(Qt.CursorShape.PointingHandCursor)
+        btn_no.setStyleSheet("background-color: #e74c3c;")
+        btn_no.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        if msg.exec() == QMessageBox.StandardButton.Yes:
             try:
                 db = connect_db()
                 cursor = db.cursor()
 
                 success_count = 0
                 for db_id in ids_to_delete:
-                    # Ambil path file
                     cursor.execute("SELECT file_path FROM surat WHERE id=?", (db_id,))
                     result = cursor.fetchone()
                     
@@ -662,7 +624,6 @@ class SuratKeluar(QWidget):
                             except Exception as e:
                                 print(f"Gagal menghapus file fisik: {e}")
 
-                    # Hapus data dari DB
                     cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
                     success_count += 1
 
@@ -670,10 +631,10 @@ class SuratKeluar(QWidget):
                 db.close()
                 
                 self.load_data()
-                self.notifikasi_custom("Berhasil", f"{success_count} data berhasil dihapus!", QMessageBox.Icon.Information)
+                self.notifikasi_custom("Berhasil", "Data dan file berhasil dihapus!", QMessageBox.Icon.Information)
             except Exception as e:
                 self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
-                
+
     def buka_berkas(self, path):
         if path and os.path.exists(path): os.startfile(os.path.abspath(path))
         else: self.notifikasi_custom("Error", "File tidak ditemukan!", QMessageBox.Icon.Critical)
