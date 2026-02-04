@@ -441,6 +441,7 @@ class SuratKeluar(QWidget):
     def aksi_hapus(self):
         # 1. Cari ID dari checkbox yang dicentang
         ids_to_delete = []
+        # Cari item yang dicentang
         for i in range(self.table.rowCount()):
             widget = self.table.cellWidget(i, 0)
             if widget:
@@ -517,15 +518,22 @@ class SuratKeluar(QWidget):
             try:
                 db = connect_db()
                 cursor = db.cursor()
+<<<<<<< HEAD
                 
                 deleted_count = 0
                 error_occurred = False
                 files_locked = [] # Simpan nama file yang terkunci
 
                 # Loop setiap data yang dipilih
+=======
+                count = 0
+                error_files = [] # List untuk mencatat file yang gagal hapus karena dibuka
+                
+>>>>>>> 10a77af257495e92ce29341440828cc54fdac8c1
                 for db_id in ids_to_delete:
                     # 1. Ambil Path File
                     cursor.execute("SELECT file_path FROM surat WHERE id=?", (db_id,))
+<<<<<<< HEAD
                     result = cursor.fetchone()
                     
                     file_deleted_physically = False # Flag status hapus file
@@ -562,12 +570,31 @@ class SuratKeluar(QWidget):
                     if file_deleted_physically:
                         cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
                         deleted_count += 1
+=======
+                    res = cursor.fetchone()
+                    
+                    file_terhapus = True
+                    # Cek apakah file fisik ada
+                    if res and res[0] and os.path.exists(res[0]):
+                        try:
+                            os.remove(res[0]) # Coba hapus file fisik
+                        except PermissionError:
+                            # JIKA ERROR (FILE SEDANG DIBUKA), JANGAN CRASH
+                            file_terhapus = False
+                            error_files.append(os.path.basename(res[0]))
+                    
+                    # Hanya hapus data di database jika file fisiknya sukses terhapus (atau memang tidak ada)
+                    if file_terhapus:
+                        cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
+                        count += 1
+>>>>>>> 10a77af257495e92ce29341440828cc54fdac8c1
 
                 db.commit()
                 db.close()
                 
                 # Refresh Tabel
                 self.load_data()
+<<<<<<< HEAD
 
                 # --- Feedback ke User ---
                 if files_locked:
@@ -586,6 +613,22 @@ class SuratKeluar(QWidget):
             except Exception as e:
                 self.notifikasi_custom("Error Sistem", str(e), QMessageBox.Icon.Critical)
         # -----------------------------------------------
+=======
+                
+                # Tampilkan pesan sukses
+                if count > 0:
+                    self.notifikasi_custom("Berhasil", f"{count} data berhasil dihapus!", QMessageBox.Icon.Information)
+                
+                # Tampilkan pesan peringatan jika ada file yang gagal dihapus
+                if error_files:
+                    list_file = "\n".join(error_files[:3]) # Tampilkan max 3 nama file
+                    if len(error_files) > 3: list_file += "\n...dan lainnya."
+                    self.notifikasi_custom("Gagal Menghapus File", 
+                                           f"File berikut sedang dibuka oleh aplikasi lain:\n{list_file}\n\nSilakan tutup file tersebut lalu coba lagi.", 
+                                           QMessageBox.Icon.Warning)
+
+            except Exception as e: self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
+>>>>>>> 10a77af257495e92ce29341440828cc54fdac8c1
 
     def buka_berkas(self, path):
         if path and os.path.exists(path): os.startfile(os.path.abspath(path))
