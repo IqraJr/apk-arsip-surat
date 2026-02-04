@@ -1,13 +1,11 @@
 import sys
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
-                             QHBoxLayout, QPushButton, QFrame, QLabel, QStackedWidget, QMessageBox)
+                             QHBoxLayout, QPushButton, QFrame, QLabel, QStackedWidget, QMessageBox, QButtonGroup)
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
-from src.kode_surat import ManajemenKodeSurat
 
 # Import komponen dari folder src
 from src import connect_db, Dashboard, SuratMasuk, SuratKeluar, KelolaDokumen
-# PASTIKAN FILE kode_surat.py SUDAH ADA DI FOLDER src
 from src.kode_surat import ManajemenKodeSurat 
 
 class AplikasiUtama(QMainWindow):
@@ -47,23 +45,40 @@ class AplikasiUtama(QMainWindow):
         logo_label.setStyleSheet("color: white; font-size: 22px; font-weight: bold; padding: 30px;")
         sidebar_layout.addWidget(logo_label)
 
-        # Daftar Menu Navigasi (Tambahkan Kode Surat di Sini)
+        # --- [STEP 1] GROUP UNTUK TOMBOL AKTIF ---
+        self.nav_group = QButtonGroup(self)
+        self.nav_group.setExclusive(True) # Hanya satu tombol yang boleh aktif
+
+        # Daftar Menu Navigasi
         # Urutan Index: 0:Dash, 1:Masuk, 2:Keluar, 3:Dokumen, 4:Kode Surat
         self.menus = [
             ("🏠   Dashboard", 0),
             ("📥   Surat Masuk", 1),
             ("📤   Surat Keluar", 2),
             ("📁   Kelola Dokumen", 3),
-            ("🔖   Kode Surat", 4), # MENU BARU
+            ("🔖   Kode Surat", 4), 
         ]
+
+        # Simpan referensi tombol agar bisa diset secara programatik nanti
+        self.btn_list = [] 
 
         for text, index in self.menus:
             btn = QPushButton(text)
             btn.setFixedHeight(55)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            
+            # --- [STEP 2] SET CHECKABLE AGAR BISA AKTIF ---
+            btn.setCheckable(True) 
+            
             btn.setStyleSheet(self.get_menu_style())
-            # Menggunakan default value idx=index untuk menghindari bug closure
+            
+            # Tambahkan ke grup
+            self.nav_group.addButton(btn, index) 
+            self.btn_list.append(btn)
+            
+            # Koneksi Sinyal
             btn.clicked.connect(lambda checked, idx=index: self.ganti_halaman(idx))
+            
             sidebar_layout.addWidget(btn)
 
         sidebar_layout.addStretch()
@@ -81,6 +96,10 @@ class AplikasiUtama(QMainWindow):
         self.layout_utama.addWidget(self.halaman_konten)
 
         self.init_halaman()
+        
+        # Set Halaman Awal (Dashboard) Aktif
+        if self.btn_list:
+            self.btn_list[0].setChecked(True)
 
     def init_halaman(self):
         # Tambahkan widget ke stacked widget sesuai urutan index di self.menus
@@ -88,11 +107,16 @@ class AplikasiUtama(QMainWindow):
         self.halaman_konten.addWidget(SuratMasuk())         # Index 1
         self.halaman_konten.addWidget(SuratKeluar())        # Index 2
         self.halaman_konten.addWidget(KelolaDokumen())      # Index 3
-        self.halaman_konten.addWidget(ManajemenKodeSurat()) # Index 4 (WIDGET BARU)
+        self.halaman_konten.addWidget(ManajemenKodeSurat()) # Index 4
 
     def ganti_halaman(self, index):
         self.halaman_konten.setCurrentIndex(index)
         current_widget = self.halaman_konten.currentWidget()
+        
+        # Pastikan tombol yang sesuai juga ter-cek (berguna jika ganti halaman dari kode lain)
+        btn = self.nav_group.button(index)
+        if btn:
+            btn.setChecked(True)
         
         # Refresh data saat halaman dibuka
         if hasattr(current_widget, 'load_data'):
@@ -102,14 +126,35 @@ class AplikasiUtama(QMainWindow):
             current_widget.refresh_data()
 
     def get_menu_style(self, is_exit=False):
-        bg_hover = "#e74c3c" if is_exit else "#1abc9c"
+        # Warna background saat Hover
+        bg_hover = "#e74c3c" if is_exit else "#34495e"
+        
+        # Warna background saat Aktif (Checked)
+        bg_checked = "#1abc9c" if not is_exit else "#c0392b"
+        
+        # --- [STEP 3] UPDATE CSS UNTUK STATE CHECKED ---
         return f"""
             QPushButton {{
-                background-color: transparent; color: white; border: none;
-                text-align: left; padding-left: 30px; font-size: 14px;
+                background-color: transparent; 
+                color: #ecf0f1; 
+                border: none;
+                text-align: left; 
+                padding-left: 30px; 
+                font-size: 14px;
+                border-left: 5px solid transparent; /* Border transparan di awal */
             }}
+            
             QPushButton:hover {{
                 background-color: {bg_hover};
+                color: white;
+            }}
+            
+            /* Efek Tombol Sedang Aktif */
+            QPushButton:checked {{
+                background-color: #34495e; /* Warna Background Aktif */
+                color: #1abc9c;            /* Warna Teks Aktif (Hijau Tosca) */
+                font-weight: bold;
+                border-left: 5px solid #1abc9c; /* Garis Indikator di Kiri */
             }}
         """
 
