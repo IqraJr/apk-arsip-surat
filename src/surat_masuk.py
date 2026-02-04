@@ -543,6 +543,7 @@ class SuratMasuk(QWidget):
                 
     def aksi_hapus(self):
         ids_to_delete = []
+        # Cari item yang dicentang
         for i in range(self.table.rowCount()):
             widget = self.table.cellWidget(i, 0)
             if widget:
@@ -564,16 +565,43 @@ class SuratMasuk(QWidget):
                 db = connect_db()
                 cursor = db.cursor()
                 count = 0
+                error_files = [] # List untuk mencatat file yang gagal hapus karena dibuka
+                
                 for db_id in ids_to_delete:
                     cursor.execute("SELECT file_path FROM surat WHERE id=?", (db_id,))
                     res = cursor.fetchone()
-                    if res and res[0] and os.path.exists(res[0]): os.remove(res[0])
-                    cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
-                    count += 1
+                    
+                    file_terhapus = True
+                    # Cek apakah file fisik ada
+                    if res and res[0] and os.path.exists(res[0]):
+                        try:
+                            os.remove(res[0]) # Coba hapus file fisik
+                        except PermissionError:
+                            # JIKA ERROR (FILE SEDANG DIBUKA), JANGAN CRASH
+                            file_terhapus = False
+                            error_files.append(os.path.basename(res[0]))
+                    
+                    # Hanya hapus data di database jika file fisiknya sukses terhapus (atau memang tidak ada)
+                    if file_terhapus:
+                        cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
+                        count += 1
+
                 db.commit()
                 db.close()
                 self.load_data()
-                self.notifikasi_custom("Berhasil", f"{count} data berhasil dihapus!", QMessageBox.Icon.Information)
+                
+                # Tampilkan pesan sukses
+                if count > 0:
+                    self.notifikasi_custom("Berhasil", f"{count} data berhasil dihapus!", QMessageBox.Icon.Information)
+                
+                # Tampilkan pesan peringatan jika ada file yang gagal dihapus
+                if error_files:
+                    list_file = "\n".join(error_files[:3]) # Tampilkan max 3 nama file
+                    if len(error_files) > 3: list_file += "\n...dan lainnya."
+                    self.notifikasi_custom("Gagal Menghapus File", 
+                                        f"File berikut sedang dibuka oleh aplikasi lain:\n{list_file}\n\nSilakan tutup file tersebut lalu coba lagi.", 
+                                        QMessageBox.Icon.Warning)
+
             except Exception as e: self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
 
     def buka_berkas(self, path):
