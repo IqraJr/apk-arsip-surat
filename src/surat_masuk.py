@@ -6,22 +6,31 @@ from datetime import datetime
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QPushButton, QTableWidget, QTableWidgetItem, 
                              QLineEdit, QHeaderView, QMessageBox, QAbstractItemView,
-                             QFileDialog, QDialog, QCheckBox, QComboBox, QStyledItemDelegate, QStyleOptionViewItem)
+                             QFileDialog, QDialog, QCheckBox, QComboBox, 
+                             QStyledItemDelegate, QStyleOptionViewItem)
 from PyQt6.QtCore import Qt, QDate
 from send2trash import send2trash
 from .db_manager import connect_db
 from .form_surat import FormTambahSurat
 from .settings import get_folder_path, set_folder_path
 
+# --- DELEGATE KHUSUS UNTUK PADDING TEXT ---
 class PaddedItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
         style = opt.widget.style()
+        
+        # Gambar background
         style.drawPrimitive(style.PrimitiveElement.PE_PanelItemViewItem, opt, painter, opt.widget)
+        
+        # Beri jarak (padding) 10px kiri-kanan
         opt.rect.adjust(10, 5, -10, -5) 
+        
+        # Hindari double-drawing saat selected
         opt.state &= ~style.StateFlag.State_Selected
         opt.state &= ~style.StateFlag.State_HasFocus
+        
         style.drawControl(style.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
 
 # --- CLASS SORTING ---
@@ -111,9 +120,7 @@ class SuratMasuk(QWidget):
         search_filter_layout = QHBoxLayout()
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("🔍 Cari Nomor, Perihal, atau Keterangan...")
-        self.search_input.setStyleSheet("""
-            QLineEdit { padding: 12px; border: 1px solid #dcdde1; border-radius: 8px; background: white; color: black; font-size: 13px; }
-        """)
+        self.search_input.setStyleSheet("padding: 12px; border: 1px solid #dcdde1; border-radius: 8px; background: white; color: black; font-size: 13px;")
         self.search_input.textChanged.connect(self.filter_data)
         
         self.combo_tahun = QComboBox()
@@ -143,6 +150,8 @@ class SuratMasuk(QWidget):
         self.table.setShowGrid(False) 
         self.table.setWordWrap(True) 
         self.table.setTextElideMode(Qt.TextElideMode.ElideNone)
+        
+        # PENTING: Set Delegate
         self.table.setItemDelegate(PaddedItemDelegate())
 
         header = self.table.horizontalHeader()
@@ -437,23 +446,18 @@ class SuratMasuk(QWidget):
                 self.notifikasi_custom("Sukses", "Data berhasil diperbarui!", QMessageBox.Icon.Information)
             except Exception as e: self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
                 
-    # --- [MODIFIKASI PENTING: FITUR HAPUS + CEK FILE LOCK + RECYCLE BIN] ---
     def aksi_hapus(self):
-        # 1. Cari ID dari checkbox yang dicentang
         ids_to_delete = []
-        # Cari item yang dicentang
         for i in range(self.table.rowCount()):
             widget = self.table.cellWidget(i, 0)
             if widget:
                 chk = widget.findChild(QCheckBox) 
-                if chk and chk.isChecked():
-                    ids_to_delete.append(chk.property("db_id"))
+                if chk and chk.isChecked(): ids_to_delete.append(chk.property("db_id"))
 
         if not ids_to_delete:
             self.notifikasi_custom("Peringatan", "Pilih (centang) data yang ingin dihapus!", QMessageBox.Icon.Warning)
             return
             
-        # --- DIALOG KONFIRMASI ---
         dialog = QDialog(self)
         dialog.setWindowTitle("Konfirmasi Hapus")
         dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
@@ -479,7 +483,6 @@ class SuratMasuk(QWidget):
         lbl_pesan.setWordWrap(True)
         lbl_pesan.setStyleSheet("font-size: 14px; color: #57606f; line-height: 1.4; border: none; background: transparent;")
         layout.addWidget(lbl_pesan)
-        
         layout.addSpacing(15)
 
         btn_layout = QHBoxLayout()
@@ -489,10 +492,7 @@ class SuratMasuk(QWidget):
         btn_batal.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_batal.setFixedHeight(40)
         btn_batal.setStyleSheet("""
-            QPushButton {
-                background-color: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7; 
-                border-radius: 6px; font-weight: bold; font-size: 14px;
-            }
+            QPushButton { background-color: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7; border-radius: 6px; font-weight: bold; font-size: 14px; }
             QPushButton:hover { background-color: #dfe6e9; }
         """)
         btn_batal.clicked.connect(dialog.reject)
@@ -501,10 +501,7 @@ class SuratMasuk(QWidget):
         btn_hapus.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_hapus.setFixedHeight(40)
         btn_hapus.setStyleSheet("""
-            QPushButton {
-                background-color: #e74c3c; color: white; border: none; 
-                border-radius: 6px; font-weight: bold; font-size: 14px;
-            }
+            QPushButton { background-color: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; }
             QPushButton:hover { background-color: #c0392b; }
         """)
         btn_hapus.clicked.connect(dialog.accept)
@@ -513,122 +510,56 @@ class SuratMasuk(QWidget):
         btn_layout.addWidget(btn_hapus)
         layout.addLayout(btn_layout)
 
-        # --- EKSEKUSI PENGHAPUSAN ---
         if dialog.exec(): 
             try:
                 db = connect_db()
                 cursor = db.cursor()
-<<<<<<< HEAD
-                
                 deleted_count = 0
                 error_occurred = False
-                files_locked = [] # Simpan nama file yang terkunci
+                files_locked = []
 
-                # Loop setiap data yang dipilih
-=======
-                count = 0
-                error_files = [] # List untuk mencatat file yang gagal hapus karena dibuka
-                
->>>>>>> 10a77af257495e92ce29341440828cc54fdac8c1
                 for db_id in ids_to_delete:
-                    # 1. Ambil Path File
                     cursor.execute("SELECT file_path FROM surat WHERE id=?", (db_id,))
-<<<<<<< HEAD
                     result = cursor.fetchone()
-                    
-                    file_deleted_physically = False # Flag status hapus file
+                    file_deleted_physically = False 
 
                     if result and result[0]:
-                        # Konversi ke Absolute Path agar Windows pasti menemukannya
                         path_file = os.path.abspath(result[0])
-                        
                         if os.path.exists(path_file):
                             try:
-                                # Coba pindahkan ke Recycle Bin
                                 send2trash(path_file)
                                 file_deleted_physically = True
                             except OSError as e:
-                                # WinError 32: The process cannot access the file because it is being used by another process.
                                 if hasattr(e, 'winerror') and e.winerror == 32:
                                     files_locked.append(os.path.basename(path_file))
                                     error_occurred = True
-                                    continue # Skip hapus database untuk item ini
+                                    continue 
                                 else:
-                                    print(f"Error lain saat menghapus file: {e}")
-                                    # Jika error lain (bukan locked), kita anggap gagal hapus fisik tapi lanjut hapus data?
-                                    # Sebaiknya jangan hapus data DB jika file fisik gagal dimanipulasi
                                     error_occurred = True
                                     continue 
                         else:
-                            # File fisik tidak ada, anggap "terhapus" (lanjut hapus DB)
                             file_deleted_physically = True
                     else:
-                        # Tidak ada path file di DB, lanjut hapus data DB
                         file_deleted_physically = True
 
-                    # 2. Hapus Data Database (Hanya jika file fisik aman/terhapus)
                     if file_deleted_physically:
                         cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
                         deleted_count += 1
-=======
-                    res = cursor.fetchone()
-                    
-                    file_terhapus = True
-                    # Cek apakah file fisik ada
-                    if res and res[0] and os.path.exists(res[0]):
-                        try:
-                            os.remove(res[0]) # Coba hapus file fisik
-                        except PermissionError:
-                            # JIKA ERROR (FILE SEDANG DIBUKA), JANGAN CRASH
-                            file_terhapus = False
-                            error_files.append(os.path.basename(res[0]))
-                    
-                    # Hanya hapus data di database jika file fisiknya sukses terhapus (atau memang tidak ada)
-                    if file_terhapus:
-                        cursor.execute("DELETE FROM surat WHERE id=?", (db_id,))
-                        count += 1
->>>>>>> 10a77af257495e92ce29341440828cc54fdac8c1
 
                 db.commit()
                 db.close()
-                
-                # Refresh Tabel
                 self.load_data()
-<<<<<<< HEAD
 
-                # --- Feedback ke User ---
                 if files_locked:
-                    # Tampilkan pesan File Terkunci
                     msg_files = "<br>".join([f"• <b>{f}</b>" for f in files_locked])
-                    self.notifikasi_custom("Gagal Menghapus Sebagian", 
-                        f"File berikut sedang dibuka oleh aplikasi lain (PDF Reader/Word):<br>{msg_files}<br><br>Mohon tutup aplikasi tersebut dan coba lagi.", 
-                        QMessageBox.Icon.Warning)
-                
+                    self.notifikasi_custom("Gagal Menghapus Sebagian", f"File berikut sedang dibuka oleh aplikasi lain (PDF Reader/Word):<br>{msg_files}<br><br>Mohon tutup aplikasi tersebut dan coba lagi.", QMessageBox.Icon.Warning)
                 elif error_occurred:
                     self.notifikasi_custom("Peringatan", "Terjadi kesalahan sistem saat menghapus beberapa file.", QMessageBox.Icon.Critical)
-                
                 elif deleted_count > 0:
                     self.notifikasi_custom("Berhasil", f"{deleted_count} data berhasil dihapus dan dipindahkan ke Recycle Bin!", QMessageBox.Icon.Information)
 
             except Exception as e:
                 self.notifikasi_custom("Error Sistem", str(e), QMessageBox.Icon.Critical)
-        # -----------------------------------------------
-=======
-                
-                # Tampilkan pesan sukses
-                if count > 0:
-                    self.notifikasi_custom("Berhasil", f"{count} data berhasil dihapus!", QMessageBox.Icon.Information)
-                
-                # Tampilkan pesan peringatan jika ada file yang gagal dihapus
-                if error_files:
-                    list_file = "\n".join(error_files[:3]) # Tampilkan max 3 nama file
-                    if len(error_files) > 3: list_file += "\n...dan lainnya."
-                    self.notifikasi_custom("Gagal Menghapus File", 
-                                        f"File berikut sedang dibuka oleh aplikasi lain:\n{list_file}\n\nSilakan tutup file tersebut lalu coba lagi.", 
-                                        QMessageBox.Icon.Warning)
-
-            except Exception as e: self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
->>>>>>> 10a77af257495e92ce29341440828cc54fdac8c1
 
     def buka_berkas(self, path):
         if path and os.path.exists(path): os.startfile(os.path.abspath(path))
