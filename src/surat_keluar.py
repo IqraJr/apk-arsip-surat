@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QLineEdit, QHeaderView, QMessageBox, QAbstractItemView,
                              QFileDialog, QDialog, QCheckBox, QComboBox, QStyledItemDelegate, QStyleOptionViewItem)
 from PyQt6.QtCore import Qt, QDate
-from send2trash import send2trash # <--- LIBRARY BARU
+from send2trash import send2trash
 from .db_manager import connect_db
 from .form_surat import FormTambahSurat
 from .settings import get_folder_path, set_folder_path
