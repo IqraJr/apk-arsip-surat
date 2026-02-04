@@ -13,7 +13,6 @@ from .db_manager import connect_db
 from .form_surat import FormTambahSurat
 from .settings import get_folder_path, set_folder_path
 
-# --- DELEGATE KHUSUS UNTUK PADDING TEXT ---
 class PaddedItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         opt = QStyleOptionViewItem(option)
