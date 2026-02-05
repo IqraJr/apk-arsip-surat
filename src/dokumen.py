@@ -409,7 +409,7 @@ class KelolaDokumen(QWidget):
             self.notifikasi_custom("Error", "Folder fisik tidak ditemukan!", QMessageBox.Icon.Critical)
 
     def aksi_hapus(self, id_doc, path_folder):
-        # UI POPUP KONFIRMASI (SAMA DENGAN SURAT MASUK)
+        # UI POPUP KONFIRMASI
         dialog = QDialog(self)
         dialog.setWindowTitle("Konfirmasi Hapus")
         dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
@@ -429,7 +429,7 @@ class KelolaDokumen(QWidget):
         lbl_judul.setStyleSheet("font-size: 22px; font-weight: 900; color: #c0392b; border: none; background: transparent;")
         layout.addWidget(lbl_judul)
         
-        lbl_pesan = QLabel("Seluruh file di dalam folder ini akan dihapus permanen.")
+        lbl_pesan = QLabel("Folder dokumen ini akan dipindahkan ke Recycle Bin.")
         lbl_pesan.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lbl_pesan.setStyleSheet("font-size: 14px; color: #57606f; border: none;")
         layout.addWidget(lbl_pesan)
@@ -453,22 +453,36 @@ class KelolaDokumen(QWidget):
         layout.addLayout(btn_layout)
         
         if dialog.exec():
+            # --- LOGIKA HAPUS YANG LEBIH AMAN ---
             try:
-                # 1. Hapus Folder Fisik (PINDAH KE RECYCLE BIN)
-                if os.path.exists(path_folder):
-                    # GANTI shutil.rmtree DENGAN INI:
-                    send2trash(path_folder) 
-
-                # 2. Hapus dari Database (Tetap hapus permanen dari DB)
-                db = connect_db(); cursor = db.cursor()
-                cursor.execute("DELETE FROM surat WHERE id = ?", (id_doc,))
-                db.commit(); db.close()
+                sukses_hapus_fisik = False
                 
-                self.load_data()
-                self.notifikasi_custom("Berhasil", "Dokumen dipindahkan ke Recycle Bin!", QMessageBox.Icon.Information)
+                # 1. Coba Hapus Folder Fisik
+                if os.path.exists(path_folder):
+                    try:
+                        send2trash(path_folder) # Pindah ke Recycle Bin
+                        sukses_hapus_fisik = True
+                    except Exception as e:
+                        # Jika gagal (misal file dikunci), beri peringatan & JANGAN hapus DB
+                        self.notifikasi_custom("Gagal", f"Tidak bisa menghapus folder: {e}\nPastikan tidak ada file yang sedang dibuka.", QMessageBox.Icon.Warning)
+                        return 
+                else:
+                    # Jika folder fisik sudah tidak ada, anggap sukses agar DB bisa dibersihkan
+                    sukses_hapus_fisik = True
+
+                # 2. Hapus dari Database HANYA jika fisik berhasil diproses
+                if sukses_hapus_fisik:
+                    db = connect_db()
+                    cursor = db.cursor()
+                    cursor.execute("DELETE FROM surat WHERE id = ?", (id_doc,))
+                    db.commit()
+                    db.close()
+                    
+                    self.load_data()
+                    self.notifikasi_custom("Berhasil", "Dokumen berhasil dihapus!", QMessageBox.Icon.Information)
             
             except Exception as e:
-                self.notifikasi_custom("Error", f"Gagal menghapus: {e}", QMessageBox.Icon.Critical)
+                self.notifikasi_custom("Error Sistem", f"Terjadi kesalahan database: {e}", QMessageBox.Icon.Critical)
 
     def reset_form(self):
         self.ent_judul.clear()
