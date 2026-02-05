@@ -12,6 +12,8 @@ class AplikasiUtama(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Sistem Manajemen Arsip Digital Surat")
+        
+        # Ukuran default (fallback jika tidak maximized)
         self.resize(1200, 800)
 
         # Cek Koneksi Database (SQLite)
@@ -162,5 +164,9 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setFont(QFont("Segoe UI", 10))
     window = AplikasiUtama()
-    window.show()
+    
+    # [PERUBAHAN DI SINI] 
+    # Menggunakan showMaximized() agar langsung full screen saat dibuka
+    window.showMaximized() 
+    
     sys.exit(app.exec())

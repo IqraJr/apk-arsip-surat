@@ -1,28 +1,18 @@
 import os
 from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                              QLineEdit, QPushButton, QTableWidget, QTableWidgetItem, 
-<<<<<<< HEAD
                              QHeaderView, QMessageBox, QFrame, QAbstractItemView, QDialog, 
                              QStyledItemDelegate, QStyleOptionViewItem)
 from PyQt6.QtCore import Qt
 from .db_manager import connect_db
 
 # --- DELEGATE KHUSUS ---
-=======
-                             QHeaderView, QMessageBox, QFrame, QAbstractItemView, 
-                             QDialog, QStyledItemDelegate, QStyleOptionViewItem)
-from PyQt6.QtCore import Qt
-from .db_manager import connect_db
-
-# --- DELEGATE KHUSUS UNTUK PADDING TEXT (SAMA DENGAN SURAT KELUAR) ---
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
 class PaddedItemDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
         style = opt.widget.style()
         style.drawPrimitive(style.PrimitiveElement.PE_PanelItemViewItem, opt, painter, opt.widget)
-<<<<<<< HEAD
         opt.rect.adjust(10, 5, -10, -5) 
         opt.state &= ~style.StateFlag.State_Selected
         opt.state &= ~style.StateFlag.State_HasFocus
@@ -35,13 +25,6 @@ class PaddedItemDelegate(QStyledItemDelegate):
         style.drawControl(style.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
 
 # --- CLASS UTAMA ---
-=======
-        opt.rect.adjust(10, 5, -10, -5) # Padding teks
-        opt.state &= ~style.StateFlag.State_Selected
-        opt.state &= ~style.StateFlag.State_HasFocus
-        style.drawControl(style.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
-
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
 class ManajemenKodeSurat(QWidget):
     def __init__(self):
         super().__init__()
@@ -51,10 +34,9 @@ class ManajemenKodeSurat(QWidget):
 
     def setup_ui(self):
         self.main_layout = QVBoxLayout(self)
-        self.main_layout.setContentsMargins(25, 25, 25, 25)
-        self.main_layout.setSpacing(20)
+        self.main_layout.setContentsMargins(20, 20, 20, 20)
+        self.main_layout.setSpacing(15)
 
-<<<<<<< HEAD
         # --- HEADER ---
         header = QLabel("🔖 Referensi Kode Surat / Klasifikasi")
         # [FIX] Pastikan header juga hitam
@@ -82,130 +64,48 @@ class ManajemenKodeSurat(QWidget):
         # Input Keterangan
         v2 = QVBoxLayout()
         v2.addWidget(QLabel("Keterangan / Uraian:"))
-=======
-        # --- 1. HEADER TITLE ---
-        header_layout = QHBoxLayout()
-        v_head = QVBoxLayout()
-        
-        lbl_title = QLabel("🔖 Referensi Kode Surat")
-        lbl_title.setStyleSheet("font-size: 24px; font-weight: bold; color: #2d3436;")
-        
-        lbl_sub = QLabel("Kelola daftar klasifikasi untuk auto-fill nomor surat")
-        lbl_sub.setStyleSheet("font-size: 13px; color: #636e72; margin-top: 2px;")
-        
-        v_head.addWidget(lbl_title)
-        v_head.addWidget(lbl_sub)
-        header_layout.addLayout(v_head)
-        header_layout.addStretch()
-        self.main_layout.addLayout(header_layout)
-
-        # --- 2. CARD INPUT (FORM) ---
-        self.form_card = QFrame()
-        self.form_card.setStyleSheet("""
-            QFrame { 
-                background-color: white; 
-                border-radius: 10px; 
-                border: 1px solid #dfe6e9; 
-            }
-            QLabel { 
-                font-weight: bold; color: #2d3436; font-size: 12px; border: none;
-            }
-            QLineEdit { 
-                border: 1px solid #dfe6e9; border-radius: 6px; 
-                padding: 10px; background: #fdfdfd; color: black;
-            }
-            QLineEdit:focus { border: 1px solid #3498db; background: white; }
-        """)
-        
-        form_layout = QHBoxLayout(self.form_card)
-        form_layout.setContentsMargins(20, 20, 20, 20)
-        form_layout.setSpacing(15)
-        
-        # Input Kode
-        v_kode = QVBoxLayout()
-        v_kode.addWidget(QLabel("KODE SURAT"))
-        self.ent_kode = QLineEdit()
-        self.ent_kode.setPlaceholderText("Cth: 005")
-        self.ent_kode.setFixedWidth(120)
-        v_kode.addWidget(self.ent_kode)
-        form_layout.addLayout(v_kode)
-
-        # Input Keterangan
-        v_ket = QVBoxLayout()
-        v_ket.addWidget(QLabel("KETERANGAN / KLASIFIKASI"))
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         self.ent_ket = QLineEdit()
-        self.ent_ket.setPlaceholderText("Cth: Undangan Dinas")
-        v_ket.addWidget(self.ent_ket)
-        form_layout.addLayout(v_ket)
+        self.ent_ket.setPlaceholderText("Cth: Surat Cuti Tahunan")
+        v2.addWidget(self.ent_ket)
+        form_layout.addLayout(v2)
 
-<<<<<<< HEAD
         # Tombol
         v3 = QVBoxLayout()
         v3.addWidget(QLabel("")) 
-=======
-        # Tombol Aksi Form
-        v_btn = QVBoxLayout()
-        v_btn.addWidget(QLabel("")) # Spacer agar sejajar ke bawah
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         btn_box = QHBoxLayout()
         
         self.btn_simpan = QPushButton("💾 Simpan")
         self.btn_simpan.setCursor(Qt.CursorShape.PointingHandCursor)
-<<<<<<< HEAD
         self.btn_simpan.setStyleSheet("""
             QPushButton { background-color: #0984e3; color: white; font-weight: bold; padding: 6px 15px; border-radius: 4px; border: none; }
             QPushButton:hover { background-color: #74b9ff; }
-=======
-        self.btn_simpan.setFixedHeight(38)
-        self.btn_simpan.setStyleSheet("""
-            QPushButton { background-color: #27ae60; color: white; font-weight: bold; border-radius: 6px; padding: 0 20px; border: none; }
-            QPushButton:hover { background-color: #2ecc71; }
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         """)
         self.btn_simpan.clicked.connect(self.simpan_data)
         
         self.btn_reset = QPushButton("🔄 Reset")
         self.btn_reset.setCursor(Qt.CursorShape.PointingHandCursor)
-<<<<<<< HEAD
         self.btn_reset.setStyleSheet("""
             QPushButton { background-color: #636e72; color: white; font-weight: bold; padding: 6px 15px; border-radius: 4px; border: none; }
             QPushButton:hover { background-color: #b2bec3; }
-=======
-        self.btn_reset.setFixedHeight(38)
-        self.btn_reset.setStyleSheet("""
-            QPushButton { background-color: #95a5a6; color: white; font-weight: bold; border-radius: 6px; padding: 0 15px; border: none; }
-            QPushButton:hover { background-color: #7f8c8d; }
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         """)
         self.btn_reset.clicked.connect(self.reset_form)
         
         btn_box.addWidget(self.btn_simpan)
         btn_box.addWidget(self.btn_reset)
-        v_btn.addLayout(btn_box)
-        form_layout.addLayout(v_btn)
+        v3.addLayout(btn_box)
+        form_layout.addLayout(v3)
 
-        self.main_layout.addWidget(self.form_card)
+        self.main_layout.addWidget(self.form_frame)
 
-        # --- 3. SEARCH BAR ---
+        # --- SEARCH BAR ---
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("🔍 Cari Kode atau Keterangan...")
-<<<<<<< HEAD
         # [FIX] Force background white & color black
         self.search_input.setStyleSheet("padding: 8px; border: 1px solid #bdc3c7; border-radius: 20px; background: white; color: black;")
-=======
-        self.search_input.setStyleSheet("""
-            QLineEdit {
-                padding: 12px; border: 1px solid #dcdde1; border-radius: 8px; 
-                background: white; color: black; font-size: 13px; margin-top: 10px;
-            }
-            QLineEdit:focus { border: 1px solid #a29bfe; }
-        """)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         self.search_input.textChanged.connect(self.load_data)
         self.main_layout.addWidget(self.search_input)
 
-        # --- 4. TABEL ---
+        # --- TABEL DATA ---
         self.table = QTableWidget()
         self.table.setColumnCount(4)
         self.table.setHorizontalHeaderLabels(["NO", "KODE", "KETERANGAN", "AKSI"])
@@ -215,38 +115,22 @@ class ManajemenKodeSurat(QWidget):
         
         self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
-<<<<<<< HEAD
         self.table.setShowGrid(False) 
         self.table.setWordWrap(True)
         self.table.setTextElideMode(Qt.TextElideMode.ElideNone)
         
         self.table.setItemDelegate(PaddedItemDelegate())
-=======
-        self.table.setShowGrid(False)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         
-        self.table.setItemDelegate(PaddedItemDelegate())
-
         header_table = self.table.horizontalHeader()
-<<<<<<< HEAD
         header_table.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         header_table.setSectionResizeMode(1, QHeaderView.ResizeMode.Interactive) 
         self.table.setColumnWidth(1, 200) 
         header_table.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         header_table.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed) 
         self.table.setColumnWidth(3, 120)
-=======
-        header_table.setSectionResizeMode(0, QHeaderView.ResizeMode.Fixed)
-        self.table.setColumnWidth(0, 60)
-        header_table.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
-        header_table.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-        header_table.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed)
-        self.table.setColumnWidth(3, 140)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         
         # [FIX] STYLESHEET TABEL DIPERBARUI UNTUK WARNA HITAM
         self.table.setStyleSheet("""
-<<<<<<< HEAD
             QTableWidget { 
                 background-color: white; 
                 color: #000000;  /* TEXT HITAM DI TABEL */
@@ -271,15 +155,6 @@ class ManajemenKodeSurat(QWidget):
                 background-color: #d1ecf1; 
                 color: #000000; /* TETAP HITAM SAAT DIPILIH (AGAR KONTRAS DENGAN BACKGROUND BIRU MUDA) */
             }
-=======
-            QTableWidget { background-color: white; color: #2d3436; border: none; outline: none; }
-            QHeaderView::section { 
-                background-color: #7132CA; color: white; padding: 12px; font-weight: bold; 
-                border: none; text-transform: uppercase; border-right: 1px solid #9b59b6;
-            }
-            QTableWidget::item { border-bottom: 1px solid #f1f2f6; border-right: 1px solid #e0e0e0; }
-            QTableWidget::item:selected { background-color: #d1ecf1; color: #0c5460; }
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         """)
         self.main_layout.addWidget(self.table)
 
@@ -307,11 +182,7 @@ class ManajemenKodeSurat(QWidget):
             if self.selected_id: # UPDATE
                 cursor.execute("UPDATE kode_surat SET kode=?, keterangan=? WHERE id=?", (kode, ket, self.selected_id))
                 self.notifikasi_custom("Sukses", "Data berhasil diperbarui!", QMessageBox.Icon.Information)
-<<<<<<< HEAD
             else: # INSERT
-=======
-            else: # MODE INSERT BARU
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
                 cursor.execute("SELECT id FROM kode_surat WHERE kode=?", (kode,))
                 if cursor.fetchone():
                     self.notifikasi_custom("Gagal", f"Kode '{kode}' sudah ada!", QMessageBox.Icon.Warning)
@@ -342,7 +213,6 @@ class ManajemenKodeSurat(QWidget):
             self.table.setRowCount(0)
             for i, row in enumerate(filtered_rows):
                 self.table.insertRow(i)
-<<<<<<< HEAD
                 
                 # KOLOM 0: NO
                 item_no = QTableWidgetItem(str(i + 1))
@@ -360,54 +230,27 @@ class ManajemenKodeSurat(QWidget):
                 self.table.setCellWidget(i, 2, lbl_ket)
                 
                 # KOLOM 3: AKSI
-=======
-                
-                item_no = QTableWidgetItem(str(i + 1))
-                item_no.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
-                self.table.setItem(i, 0, item_no)
-                
-                self.table.setItem(i, 1, QTableWidgetItem(row[1]))
-                self.table.setItem(i, 2, QTableWidgetItem(row[2]))
-                
-                # Widget Tombol Aksi
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
                 btn_widget = QWidget()
                 btn_widget.setStyleSheet("background: transparent;")
                 btn_layout = QHBoxLayout(btn_widget)
-                btn_layout.setContentsMargins(5, 5, 5, 5)
+                btn_layout.setContentsMargins(2, 2, 2, 2)
                 btn_layout.setSpacing(5)
                 btn_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
                 
-<<<<<<< HEAD
                 btn_edit = QPushButton("✎")
                 btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
                 btn_edit.setToolTip("Edit")
                 btn_edit.setStyleSheet("""
                     QPushButton { background: #f1c40f; border: none; border-radius: 4px; padding: 4px; color: white; font-weight: bold; }
-=======
-                btn_edit = QPushButton("✏️")
-                btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
-                btn_edit.setToolTip("Edit Data")
-                btn_edit.setStyleSheet("""
-                    QPushButton { background: #f1c40f; border-radius: 4px; padding: 6px; }
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
                     QPushButton:hover { background: #f39c12; }
                 """)
                 btn_edit.clicked.connect(lambda _, r=row: self.isi_form_edit(r))
                 
-<<<<<<< HEAD
                 btn_hapus = QPushButton("✖")
                 btn_hapus.setCursor(Qt.CursorShape.PointingHandCursor)
                 btn_hapus.setToolTip("Hapus")
                 btn_hapus.setStyleSheet("""
                     QPushButton { background: #ff7675; border: none; border-radius: 4px; padding: 4px; color: white; font-weight: bold; }
-=======
-                btn_hapus = QPushButton("🗑")
-                btn_hapus.setCursor(Qt.CursorShape.PointingHandCursor)
-                btn_hapus.setToolTip("Hapus Data")
-                btn_hapus.setStyleSheet("""
-                    QPushButton { background: #ff7675; border-radius: 4px; padding: 6px; color: white; }
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
                     QPushButton:hover { background: #d63031; }
                 """)
                 btn_hapus.clicked.connect(lambda _, id_k=row[0]: self.hapus_data(id_k))
@@ -418,8 +261,6 @@ class ManajemenKodeSurat(QWidget):
             
             self.table.resizeRowsToContents()
                 
-            self.table.resizeRowsToContents()
-
         except Exception as e:
             print(f"Error load data: {e}")
 
@@ -429,36 +270,20 @@ class ManajemenKodeSurat(QWidget):
         self.ent_ket.setText(row_data[2])
         self.btn_simpan.setText("Update Data")
         self.btn_simpan.setStyleSheet("""
-<<<<<<< HEAD
             QPushButton { background-color: #e67e22; color: white; font-weight: bold; padding: 6px 15px; border-radius: 4px; border: none; }
-=======
-            QPushButton { background-color: #e67e22; color: white; font-weight: bold; border-radius: 6px; padding: 0 20px; border: none; }
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
             QPushButton:hover { background-color: #d35400; }
         """)
         self.ent_kode.setFocus()
 
     def hapus_data(self, id_kode):
-<<<<<<< HEAD
         dialog = QDialog(self)
         dialog.setWindowTitle("Konfirmasi Hapus")
         dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
         dialog.setFixedWidth(380)
-=======
-        # --- UI POPUP CUSTOM ALA SURAT KELUAR ---
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Konfirmasi Hapus")
-        dialog.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.CustomizeWindowHint | Qt.WindowType.WindowTitleHint)
-        dialog.setFixedWidth(400)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         dialog.setStyleSheet("background-color: white; border-radius: 8px;")
         
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(20, 20, 20, 20)
-<<<<<<< HEAD
-=======
-        layout.setSpacing(10)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         
         lbl_icon = QLabel("🗑️")
         lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -467,7 +292,6 @@ class ManajemenKodeSurat(QWidget):
         
         lbl_judul = QLabel("HAPUS KODE?")
         lbl_judul.setAlignment(Qt.AlignmentFlag.AlignCenter)
-<<<<<<< HEAD
         lbl_judul.setStyleSheet("font-size: 22px; font-weight: 900; color: #c0392b; border: none; background: transparent;")
         layout.addWidget(lbl_judul)
         
@@ -482,58 +306,18 @@ class ManajemenKodeSurat(QWidget):
         btn_batal.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_batal.setFixedHeight(40)
         btn_batal.setStyleSheet("QPushButton { background-color: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7; border-radius: 6px; font-weight: bold; } QPushButton:hover { background-color: #dfe6e9; }")
-=======
-        lbl_judul.setStyleSheet("font-size: 22px; font-weight: 900; color: #c0392b; border: none; background: transparent; margin-top: 5px;")
-        layout.addWidget(lbl_judul)
-        
-        lbl_pesan = QLabel("Anda akan menghapus kode referensi ini.<br>Data yang sudah dihapus tidak dapat dikembalikan.")
-        lbl_pesan.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_pesan.setWordWrap(True)
-        lbl_pesan.setStyleSheet("font-size: 14px; color: #57606f; line-height: 1.4; border: none; background: transparent;")
-        layout.addWidget(lbl_pesan)
-        
-        layout.addSpacing(15)
-
-        btn_layout = QHBoxLayout()
-        btn_layout.setSpacing(10)
-        
-        btn_batal = QPushButton("Batal")
-        btn_batal.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_batal.setFixedHeight(40)
-        btn_batal.setStyleSheet("""
-            QPushButton {
-                background-color: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7; 
-                border-radius: 6px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #dfe6e9; }
-        """)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         btn_batal.clicked.connect(dialog.reject)
         
         btn_hapus = QPushButton("Ya, Hapus")
         btn_hapus.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_hapus.setFixedHeight(40)
-<<<<<<< HEAD
         btn_hapus.setStyleSheet("QPushButton { background-color: #e74c3c; color: white; border: none; border-radius: 6px; font-weight: bold; } QPushButton:hover { background-color: #c0392b; }")
-=======
-        btn_hapus.setStyleSheet("""
-            QPushButton {
-                background-color: #e74c3c; color: white; border: none; 
-                border-radius: 6px; font-weight: bold; font-size: 14px;
-            }
-            QPushButton:hover { background-color: #c0392b; }
-        """)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         btn_hapus.clicked.connect(dialog.accept)
         
         btn_layout.addWidget(btn_batal)
         btn_layout.addWidget(btn_hapus)
         layout.addLayout(btn_layout)
-<<<<<<< HEAD
         
-=======
-
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         if dialog.exec():
             try:
                 db = connect_db()
@@ -542,13 +326,8 @@ class ManajemenKodeSurat(QWidget):
                 db.commit()
                 db.close()
                 self.load_data()
-<<<<<<< HEAD
                 self.reset_form()
                 self.notifikasi_custom("Berhasil", "Kode berhasil dihapus!", QMessageBox.Icon.Information)
-=======
-                self.reset_form() 
-                self.notifikasi_custom("Berhasil", "Kode surat berhasil dihapus!", QMessageBox.Icon.Information)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
             except Exception as e:
                 self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
 
@@ -558,13 +337,8 @@ class ManajemenKodeSurat(QWidget):
         self.ent_ket.clear()
         self.btn_simpan.setText("💾 Simpan")
         self.btn_simpan.setStyleSheet("""
-<<<<<<< HEAD
             QPushButton { background-color: #0984e3; color: white; font-weight: bold; padding: 6px 15px; border-radius: 4px; border: none; }
             QPushButton:hover { background-color: #74b9ff; }
-=======
-            QPushButton { background-color: #27ae60; color: white; font-weight: bold; border-radius: 6px; padding: 0 20px; border: none; }
-            QPushButton:hover { background-color: #2ecc71; }
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         """)
 
     def notifikasi_custom(self, judul, pesan, ikon):
@@ -576,20 +350,12 @@ class ManajemenKodeSurat(QWidget):
         
         layout = QVBoxLayout(dialog)
         layout.setContentsMargins(25, 25, 25, 25)
-<<<<<<< HEAD
         layout.setSpacing(10)
         
         emoji = "✅" 
         warna_judul = "#27ae60"
         if ikon == QMessageBox.Icon.Warning: emoji, warna_judul = "⚠️", "#f39c12"
         elif ikon == QMessageBox.Icon.Critical: emoji, warna_judul = "❌", "#c0392b"
-=======
-        
-        emoji = "✅" 
-        warna = "#27ae60"
-        if ikon == QMessageBox.Icon.Warning: emoji, warna = "⚠️", "#f39c12"
-        elif ikon == QMessageBox.Icon.Critical: emoji, warna = "❌", "#c0392b"
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
 
         lbl_icon = QLabel(emoji)
         lbl_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -598,11 +364,7 @@ class ManajemenKodeSurat(QWidget):
         
         lbl_judul = QLabel(judul.upper())
         lbl_judul.setAlignment(Qt.AlignmentFlag.AlignCenter)
-<<<<<<< HEAD
         lbl_judul.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {warna_judul}; border: none; background: transparent; margin-top: 5px;")
-=======
-        lbl_judul.setStyleSheet(f"font-size: 20px; font-weight: 900; color: {warna}; border: none; background: transparent; margin-top: 5px;")
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         layout.addWidget(lbl_judul)
         
         lbl_pesan = QLabel(pesan)
@@ -610,7 +372,6 @@ class ManajemenKodeSurat(QWidget):
         lbl_pesan.setWordWrap(True)
         lbl_pesan.setStyleSheet("font-size: 13px; color: #57606f; line-height: 1.4; border: none; background: transparent;")
         layout.addWidget(lbl_pesan)
-<<<<<<< HEAD
         
         layout.addSpacing(15)
 
@@ -625,12 +386,4 @@ class ManajemenKodeSurat(QWidget):
         """)
         layout.addWidget(btn_ok)
 
-=======
-        layout.addSpacing(15)
-
-        btn = QPushButton("OK")
-        btn.clicked.connect(dialog.accept)
-        btn.setStyleSheet("QPushButton { background-color: #34495e; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 14px; height: 45px; } QPushButton:hover { background-color: #2c3e50; }")
-        layout.addWidget(btn)
->>>>>>> a501ae291d4fa2baf8c0f8a258d8d2b8edf7129f
         dialog.exec()
