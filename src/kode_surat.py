@@ -18,9 +18,8 @@ class PaddedItemDelegate(QStyledItemDelegate):
         opt.state &= ~style.StateFlag.State_HasFocus
         
         # Paksa text warna hitam saat menggambar item via delegate
-        # (Ini backup jika stylesheet tidak tembus)
         opt.palette.setColor(opt.palette.ColorRole.Text, Qt.GlobalColor.black)
-        opt.palette.setColor(opt.palette.ColorRole.HighlightedText, Qt.GlobalColor.black) # Tetap hitam saat diseleksi
+        opt.palette.setColor(opt.palette.ColorRole.HighlightedText, Qt.GlobalColor.black) 
         
         style.drawControl(style.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
 
@@ -39,7 +38,6 @@ class ManajemenKodeSurat(QWidget):
 
         # --- HEADER ---
         header = QLabel("🔖 Referensi Kode Surat / Klasifikasi")
-        # [FIX] Pastikan header juga hitam
         header.setStyleSheet("font-size: 20px; font-weight: bold; color: #000000;")
         self.main_layout.addWidget(header)
 
@@ -47,7 +45,7 @@ class ManajemenKodeSurat(QWidget):
         self.form_frame = QFrame()
         self.form_frame.setStyleSheet("""
             QFrame { background-color: white; border-radius: 8px; border: 1px solid #dfe6e9; }
-            QLabel { border: none; font-weight: bold; color: #000000; } /* Label Form Hitam */
+            QLabel { border: none; font-weight: bold; color: #000000; } 
             QLineEdit { border: 1px solid #b2bec3; border-radius: 4px; padding: 6px; color: black; background-color: white; }
         """)
         form_layout = QHBoxLayout(self.form_frame)
@@ -100,7 +98,6 @@ class ManajemenKodeSurat(QWidget):
         # --- SEARCH BAR ---
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText("🔍 Cari Kode atau Keterangan...")
-        # [FIX] Force background white & color black
         self.search_input.setStyleSheet("padding: 8px; border: 1px solid #bdc3c7; border-radius: 20px; background: white; color: black;")
         self.search_input.textChanged.connect(self.load_data)
         self.main_layout.addWidget(self.search_input)
@@ -129,11 +126,10 @@ class ManajemenKodeSurat(QWidget):
         header_table.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed) 
         self.table.setColumnWidth(3, 120)
         
-        # [FIX] STYLESHEET TABEL DIPERBARUI UNTUK WARNA HITAM
         self.table.setStyleSheet("""
             QTableWidget { 
                 background-color: white; 
-                color: #000000;  /* TEXT HITAM DI TABEL */
+                color: #000000; 
                 border: none; 
                 outline: none; 
             }
@@ -149,21 +145,19 @@ class ManajemenKodeSurat(QWidget):
             QTableWidget::item { 
                 border-bottom: 1px solid #f1f2f6; 
                 border-right: 1px solid #e0e0e0;
-                color: #000000; /* TEXT HITAM PER ITEM */
+                color: #000000;
             }
             QTableWidget::item:selected { 
                 background-color: #d1ecf1; 
-                color: #000000; /* TETAP HITAM SAAT DIPILIH (AGAR KONTRAS DENGAN BACKGROUND BIRU MUDA) */
+                color: #000000; 
             }
         """)
         self.main_layout.addWidget(self.table)
 
     def create_copyable_label(self, text):
-        """Membuat Label yang teksnya bisa di-blok dan di-copy"""
         lbl = QLabel(text)
         lbl.setWordWrap(True)
         lbl.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
-        # [FIX] Force Text Color Black di sini
         lbl.setStyleSheet("padding: 10px; background-color: transparent; color: #000000;") 
         return lbl
 
@@ -179,15 +173,25 @@ class ManajemenKodeSurat(QWidget):
             db = connect_db()
             cursor = db.cursor()
             
+            # --- [LOGIKA BARU: VALIDASI UNIK PADA KETERANGAN, BUKAN KODE] ---
+            if self.selected_id:
+                # Mode Update: Cek keterangan duplikat di ID lain
+                cursor.execute("SELECT id FROM kode_surat WHERE keterangan=? AND id!=?", (ket, self.selected_id))
+            else:
+                # Mode Insert: Cek keterangan duplikat di semua data
+                cursor.execute("SELECT id FROM kode_surat WHERE keterangan=?", (ket,))
+
+            if cursor.fetchone():
+                self.notifikasi_custom("Gagal", f"Keterangan '{ket}' sudah ada! Mohon gunakan deskripsi lain.", QMessageBox.Icon.Warning)
+                db.close()
+                return
+            # ----------------------------------------------------------------
+
+            # EKSEKUSI SIMPAN
             if self.selected_id: # UPDATE
                 cursor.execute("UPDATE kode_surat SET kode=?, keterangan=? WHERE id=?", (kode, ket, self.selected_id))
                 self.notifikasi_custom("Sukses", "Data berhasil diperbarui!", QMessageBox.Icon.Information)
             else: # INSERT
-                cursor.execute("SELECT id FROM kode_surat WHERE kode=?", (kode,))
-                if cursor.fetchone():
-                    self.notifikasi_custom("Gagal", f"Kode '{kode}' sudah ada!", QMessageBox.Icon.Warning)
-                    db.close()
-                    return
                 cursor.execute("INSERT INTO kode_surat (kode, keterangan) VALUES (?, ?)", (kode, ket))
                 self.notifikasi_custom("Sukses", "Kode baru berhasil disimpan!", QMessageBox.Icon.Information)
             
@@ -217,15 +221,14 @@ class ManajemenKodeSurat(QWidget):
                 # KOLOM 0: NO
                 item_no = QTableWidgetItem(str(i + 1))
                 item_no.setTextAlignment(Qt.AlignmentFlag.AlignCenter | Qt.AlignmentFlag.AlignTop)
-                # Pastikan warna text hitam via properti (backup)
                 item_no.setForeground(Qt.GlobalColor.black)
                 self.table.setItem(i, 0, item_no)
                 
-                # KOLOM 1: KODE (Label Copyable)
+                # KOLOM 1: KODE
                 lbl_kode = self.create_copyable_label(row[1])
                 self.table.setCellWidget(i, 1, lbl_kode)
                 
-                # KOLOM 2: KETERANGAN (Label Copyable)
+                # KOLOM 2: KETERANGAN
                 lbl_ket = self.create_copyable_label(row[2])
                 self.table.setCellWidget(i, 2, lbl_ket)
                 

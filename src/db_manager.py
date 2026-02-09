@@ -39,8 +39,8 @@ def connect_db():
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS kode_surat (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                kode TEXT UNIQUE,
-                keterangan TEXT
+                kode TEXT NOT NULL,
+                keterangan TEXT NOT NULL UNIQUE
             )
         """)
         
