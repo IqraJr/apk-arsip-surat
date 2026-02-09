@@ -188,7 +188,7 @@ class KelolaDokumen(QWidget):
         card_layout.addLayout(file_area_layout)
 
         # Tombol Simpan
-        self.btn_simpan = QPushButton("🚀 Unggah & Simpan Kelompok Dokumen")
+        self.btn_simpan = QPushButton("Simpan Dokumen")
         self.btn_simpan.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_simpan.setStyleSheet("""
             QPushButton { background-color: #27ae60; color: white; font-weight: bold; padding: 12px; border-radius: 8px; border: none; }
