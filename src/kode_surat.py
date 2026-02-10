@@ -124,7 +124,7 @@ class ManajemenKodeSurat(QWidget):
         self.table.setColumnWidth(1, 200) 
         header_table.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
         header_table.setSectionResizeMode(3, QHeaderView.ResizeMode.Fixed) 
-        self.table.setColumnWidth(3, 120)
+        self.table.setColumnWidth(3, 140)
         
         self.table.setStyleSheet("""
             QTableWidget { 
@@ -236,15 +236,16 @@ class ManajemenKodeSurat(QWidget):
                 btn_widget = QWidget()
                 btn_widget.setStyleSheet("background: transparent;")
                 btn_layout = QHBoxLayout(btn_widget)
-                btn_layout.setContentsMargins(2, 2, 2, 2)
+                btn_layout.setContentsMargins(6, 6, 6, 6)
                 btn_layout.setSpacing(5)
-                btn_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+                btn_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
                 
                 btn_edit = QPushButton("✎")
                 btn_edit.setCursor(Qt.CursorShape.PointingHandCursor)
                 btn_edit.setToolTip("Edit")
                 btn_edit.setStyleSheet("""
-                    QPushButton { background: #f1c40f; border: none; border-radius: 4px; padding: 4px; color: white; font-weight: bold; }
+                    QPushButton { background: #f1c40f; border: none; border-radius: 4px; padding: 9px; color: white; font-weight: bold; }
                     QPushButton:hover { background: #f39c12; }
                 """)
                 btn_edit.clicked.connect(lambda _, r=row: self.isi_form_edit(r))
@@ -253,7 +254,7 @@ class ManajemenKodeSurat(QWidget):
                 btn_hapus.setCursor(Qt.CursorShape.PointingHandCursor)
                 btn_hapus.setToolTip("Hapus")
                 btn_hapus.setStyleSheet("""
-                    QPushButton { background: #ff7675; border: none; border-radius: 4px; padding: 4px; color: white; font-weight: bold; }
+                    QPushButton { background: #ff7675; border: none; border-radius: 4px; padding: 9px; color: white; font-weight: bold; }
                     QPushButton:hover { background: #d63031; }
                 """)
                 btn_hapus.clicked.connect(lambda _, id_k=row[0]: self.hapus_data(id_k))
@@ -262,7 +263,9 @@ class ManajemenKodeSurat(QWidget):
                 btn_layout.addWidget(btn_hapus)
                 self.table.setCellWidget(i, 3, btn_widget)
             
-            self.table.resizeRowsToContents()
+            for row in range(self.table.rowCount()):
+                 self.table.setRowHeight(row,60)
+
                 
         except Exception as e:
             print(f"Error load data: {e}")
