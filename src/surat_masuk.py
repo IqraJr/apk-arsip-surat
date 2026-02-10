@@ -10,6 +10,10 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QStyledItemDelegate, QStyleOptionViewItem)
 from PyQt6.QtCore import Qt, QDate
 from send2trash import send2trash
+# --- IMPORT KHUSUS UNTUK STYLING EXCEL ---
+from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
+# -----------------------------------------
 from .db_manager import connect_db
 from .form_surat import FormTambahSurat
 from .settings import get_folder_path, set_folder_path
@@ -20,17 +24,10 @@ class PaddedItemDelegate(QStyledItemDelegate):
         opt = QStyleOptionViewItem(option)
         self.initStyleOption(opt, index)
         style = opt.widget.style()
-        
-        # Gambar background
         style.drawPrimitive(style.PrimitiveElement.PE_PanelItemViewItem, opt, painter, opt.widget)
-        
-        # Beri jarak (padding) 10px kiri-kanan
         opt.rect.adjust(10, 5, -10, -5) 
-        
-        # Hindari double-drawing saat selected
         opt.state &= ~style.StateFlag.State_Selected
         opt.state &= ~style.StateFlag.State_HasFocus
-        
         style.drawControl(style.ControlElement.CE_ItemViewItem, opt, painter, opt.widget)
 
 # --- CLASS SORTING ---
@@ -119,7 +116,8 @@ class SuratMasuk(QWidget):
         # --- SEARCH & FILTER ---
         search_filter_layout = QHBoxLayout()
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("🔍 Cari Nomor, Perihal, atau Keterangan...")
+        # [UPDATE] Placeholder diperbarui
+        self.search_input.setPlaceholderText("🔍 Cari Pengirim (Dari), Nomor, Perihal, atau Keterangan...")
         self.search_input.setStyleSheet("padding: 12px; border: 1px solid #dcdde1; border-radius: 8px; background: white; color: black; font-size: 13px;")
         self.search_input.textChanged.connect(self.filter_data)
         
@@ -150,8 +148,6 @@ class SuratMasuk(QWidget):
         self.table.setShowGrid(False) 
         self.table.setWordWrap(True) 
         self.table.setTextElideMode(Qt.TextElideMode.ElideNone)
-        
-        # PENTING: Set Delegate
         self.table.setItemDelegate(PaddedItemDelegate())
 
         header = self.table.horizontalHeader()
@@ -235,6 +231,7 @@ class SuratMasuk(QWidget):
             db = connect_db()
             if db:
                 cursor = db.cursor()
+                # Kolom: 0:id, 1:tgl_terima, 2:asal_surat(DARI), 3:nomor, 4:tgl_surat, 5:judul, 6:ket, 7:path
                 cursor.execute("SELECT id, tanggal, asal_surat, nomor_surat, tanggal_surat, judul_surat, keterangan, file_path FROM surat WHERE kategori='masuk' ORDER BY id DESC")
                 self.all_data = cursor.fetchall()
                 self.populate_tahun_filter()
@@ -266,7 +263,10 @@ class SuratMasuk(QWidget):
         selected_tahun = self.combo_tahun.currentText()
         self.filtered_data = []
         for row in self.all_data:
-            text_data = f"{row[3]} {row[5]} {row[6]}".lower() 
+            # [MODIFIKASI PENCARIAN DI SINI]
+            # row[2] = asal_surat (DARI), row[3] = nomor, row[5] = perihal, row[6] = ket
+            text_data = f"{row[2]} {row[3]} {row[5]} {row[6]}".lower() 
+            
             row_tahun = ""
             val_tgl = str(row[1]) if row[1] else ""
             if val_tgl and "-" in val_tgl:
@@ -368,12 +368,59 @@ class SuratMasuk(QWidget):
     def export_to_excel(self):
         data_exp = self.filtered_data if self.filtered_data else self.all_data
         if not data_exp: return
-        path, _ = QFileDialog.getSaveFileName(self, "Simpan Laporan", f"Laporan_Surat_Masuk_{datetime.now().strftime('%d%m%Y')}.xlsx", "Excel Files (*.xlsx)")
+        default_name = f"Laporan_Surat_Masuk_{datetime.now().strftime('%d%m%Y_%H%M')}.xlsx"
+        path, _ = QFileDialog.getSaveFileName(self, "Simpan Laporan", default_name, "Excel Files (*.xlsx)")
+        
         if path:
             try:
-                df = pd.DataFrame(data_exp, columns=["ID", "Tgl Terima", "Dari", "Nomor Surat", "Tgl Surat", "Perihal", "Ket", "Path"])
-                df.to_excel(path, index=False)
-                self.notifikasi_custom("Sukses", "Laporan berhasil disimpan!", QMessageBox.Icon.Information)
+                list_data_rapi = []
+                for index, row in enumerate(data_exp, start=1):
+                    list_data_rapi.append([
+                        index, row[1], row[2], row[3], row[4], row[5], row[6], row[7]
+                    ])
+
+                cols = ["No", "Tgl Terima", "Dari", "Nomor Surat", "Tgl Surat", "Perihal", "Keterangan", "Lokasi File"]
+                df = pd.DataFrame(list_data_rapi, columns=cols)
+
+                with pd.ExcelWriter(path, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Laporan Surat Masuk')
+                    workbook = writer.book
+                    worksheet = writer.sheets['Laporan Surat Masuk']
+
+                    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                                         top=Side(style='thin'), bottom=Side(style='thin'))
+                    header_font = Font(bold=True, color="FFFFFF") 
+                    header_fill = PatternFill(start_color="4a69bd", end_color="4a69bd", fill_type="solid") 
+                    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                    left_align = Alignment(horizontal='left', vertical='top', wrap_text=True)
+
+                    for cell in worksheet[1]:
+                        cell.font = header_font
+                        cell.fill = header_fill
+                        cell.alignment = center_align
+                        cell.border = thin_border
+
+                    for row in worksheet.iter_rows(min_row=2, max_row=len(list_data_rapi)+1):
+                        for cell in row:
+                            cell.border = thin_border
+                            cell.alignment = left_align
+                            if cell.column == 1:
+                                cell.alignment = center_align
+
+                    for column in worksheet.columns:
+                        max_length = 0
+                        column_letter = get_column_letter(column[0].column)
+                        for cell in column:
+                            try:
+                                if len(str(cell.value)) > max_length:
+                                    max_length = len(str(cell.value))
+                            except: pass
+                        adjusted_width = (max_length + 2)
+                        if adjusted_width > 50: adjusted_width = 50 
+                        if adjusted_width < 10: adjusted_width = 10
+                        worksheet.column_dimensions[column_letter].width = adjusted_width
+
+                self.notifikasi_custom("Sukses", "Laporan berhasil disimpan dengan rapi!", QMessageBox.Icon.Information)
             except Exception as e: self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
 
     def aksi_tambah(self):

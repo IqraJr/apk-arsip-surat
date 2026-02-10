@@ -10,6 +10,10 @@ from PyQt6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                              QStyledItemDelegate, QStyleOptionViewItem)
 from PyQt6.QtCore import Qt, QDate
 from send2trash import send2trash
+# --- IMPORT KHUSUS UNTUK STYLING EXCEL ---
+from openpyxl.styles import Border, Side, Alignment, Font, PatternFill
+from openpyxl.utils import get_column_letter
+# -----------------------------------------
 from .db_manager import connect_db
 from .form_surat import FormTambahSurat
 from .settings import get_folder_path, set_folder_path
@@ -356,15 +360,77 @@ class SuratKeluar(QWidget):
             self.current_page += 1
             self.display_data(self.filtered_data)
 
+    # --- FUNGSI EXPORT EXCEL BARU (URUTAN ID 1, 2, 3... & STYLING RAPI) ---
     def export_to_excel(self):
         data_exp = self.filtered_data if self.filtered_data else self.all_data
         if not data_exp: return
-        path, _ = QFileDialog.getSaveFileName(self, "Simpan Laporan", f"Laporan_Surat_Keluar_{datetime.now().strftime('%d%m%Y')}.xlsx", "Excel Files (*.xlsx)")
+
+        default_name = f"Laporan_Surat_Keluar_{datetime.now().strftime('%d%m%Y_%H%M')}.xlsx"
+        path, _ = QFileDialog.getSaveFileName(self, "Simpan Laporan", default_name, "Excel Files (*.xlsx)")
+        
         if path:
             try:
-                df = pd.DataFrame(data_exp, columns=["ID", "Tgl Kirim", "Kepada", "Nomor Surat", "Tgl Surat", "Perihal", "Ket", "Path"])
-                df.to_excel(path, index=False)
-                self.notifikasi_custom("Sukses", "Laporan berhasil disimpan!", QMessageBox.Icon.Information)
+                # 1. Buat list data dengan nomor urut baru
+                list_data_rapi = []
+                for index, row in enumerate(data_exp, start=1):
+                    list_data_rapi.append([
+                        index,          # No Urut (1, 2, 3...)
+                        row[1],         # Tanggal Kirim
+                        row[2],         # Kepada
+                        row[3],         # Nomor Surat
+                        row[4],         # Tgl Surat
+                        row[5],         # Perihal
+                        row[6],         # Keterangan
+                        row[7]          # Path
+                    ])
+
+                cols = ["No", "Tgl Kirim", "Kepada", "Nomor Surat", "Tgl Surat", "Perihal", "Keterangan", "Lokasi File"]
+                df = pd.DataFrame(list_data_rapi, columns=cols)
+
+                with pd.ExcelWriter(path, engine='openpyxl') as writer:
+                    df.to_excel(writer, index=False, sheet_name='Laporan Surat Keluar')
+                    
+                    workbook = writer.book
+                    worksheet = writer.sheets['Laporan Surat Keluar']
+
+                    # Styling
+                    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                                         top=Side(style='thin'), bottom=Side(style='thin'))
+                    header_font = Font(bold=True, color="FFFFFF")
+                    header_fill = PatternFill(start_color="e55039", end_color="e55039", fill_type="solid") # Merah
+                    center_align = Alignment(horizontal='center', vertical='center', wrap_text=True)
+                    left_align = Alignment(horizontal='left', vertical='top', wrap_text=True)
+
+                    # Header
+                    for cell in worksheet[1]:
+                        cell.font = header_font
+                        cell.fill = header_fill
+                        cell.alignment = center_align
+                        cell.border = thin_border
+
+                    # Body
+                    for row in worksheet.iter_rows(min_row=2, max_row=len(list_data_rapi)+1):
+                        for cell in row:
+                            cell.border = thin_border
+                            cell.alignment = left_align
+                            if cell.column == 1:
+                                cell.alignment = center_align
+
+                    # Auto Width
+                    for column in worksheet.columns:
+                        max_length = 0
+                        column_letter = get_column_letter(column[0].column)
+                        for cell in column:
+                            try:
+                                if len(str(cell.value)) > max_length: max_length = len(str(cell.value))
+                            except: pass
+                        
+                        adj_width = (max_length + 2)
+                        if adj_width > 50: adj_width = 50
+                        if adj_width < 10: adj_width = 10
+                        worksheet.column_dimensions[column_letter].width = adj_width
+
+                self.notifikasi_custom("Sukses", "Laporan berhasil disimpan dengan rapi!", QMessageBox.Icon.Information)
             except Exception as e: self.notifikasi_custom("Error", str(e), QMessageBox.Icon.Critical)
 
     def aksi_tambah(self):
