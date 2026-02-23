@@ -1,8 +1,10 @@
 import sys
+import os
+import ctypes # Untuk fix icon di Taskbar Windows
 from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, 
                              QHBoxLayout, QPushButton, QFrame, QLabel, QStackedWidget, QMessageBox, QButtonGroup)
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QIcon
 
 # Import komponen dari folder src
 from src import connect_db, Dashboard, SuratMasuk, SuratKeluar, KelolaDokumen
@@ -11,9 +13,17 @@ from src.kode_surat import ManajemenKodeSurat
 class AplikasiUtama(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Sistem Manajemen Arsip Digital Surat")
+        # [UBAH 1] Judul Window (Muncul di baris paling atas aplikasi)
+        self.setWindowTitle("LENTERA - Layanan Elektronik Penataan Arsip")
         
-        # Ukuran default (fallback jika tidak maximized)
+        # Set Icon Window (Pojok Kiri Atas)
+        path_icon = os.path.join(os.getcwd(), "assets", "icon.ico")
+        if os.path.exists(path_icon):
+            self.setWindowIcon(QIcon(path_icon))
+        else:
+            print(f"Warning: Icon tidak ditemukan di {path_icon}")
+        
+        # Ukuran default (fallback)
         self.resize(1200, 800)
 
         # Cek Koneksi Database (SQLite)
@@ -39,20 +49,28 @@ class AplikasiUtama(QMainWindow):
         self.layout_utama.addWidget(self.sidebar)
 
         sidebar_layout = QVBoxLayout(self.sidebar)
-        sidebar_layout.setContentsMargins(0, 10, 0, 10)
-        sidebar_layout.setSpacing(5)
+        sidebar_layout.setContentsMargins(0, 20, 0, 20)
+        sidebar_layout.setSpacing(10)
 
-        logo_label = QLabel("SI-PENGARSIP")
+        # [UBAH 2] Logo Text di Sidebar
+        logo_label = QLabel("LENTERA")
         logo_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        logo_label.setStyleSheet("color: white; font-size: 22px; font-weight: bold; padding: 30px;")
+        logo_label.setStyleSheet("color: white; font-size: 28px; font-weight: bold;")
         sidebar_layout.addWidget(logo_label)
 
-        # --- [STEP 1] GROUP UNTUK TOMBOL AKTIF ---
+        # Subtitle kecil di bawah logo
+        subtitle_label = QLabel("Layanan Elektronik\nPenataan Arsip")
+        subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        subtitle_label.setStyleSheet("color: #bdc3c7; font-size: 11px;")
+        sidebar_layout.addWidget(subtitle_label)
+        
+        sidebar_layout.addSpacing(20) # Jarak ke menu
+
+        # --- NAVIGASI GROUP ---
         self.nav_group = QButtonGroup(self)
-        self.nav_group.setExclusive(True) # Hanya satu tombol yang boleh aktif
+        self.nav_group.setExclusive(True) 
 
         # Daftar Menu Navigasi
-        # Urutan Index: 0:Dash, 1:Masuk, 2:Keluar, 3:Dokumen, 4:Kode Surat
         self.menus = [
             ("🏠   Dashboard", 0),
             ("📥   Surat Masuk", 1),
@@ -61,7 +79,6 @@ class AplikasiUtama(QMainWindow):
             ("🔖   Kode Surat", 4), 
         ]
 
-        # Simpan referensi tombol agar bisa diset secara programatik nanti
         self.btn_list = [] 
 
         for text, index in self.menus:
@@ -69,9 +86,8 @@ class AplikasiUtama(QMainWindow):
             btn.setFixedHeight(55)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
             
-            # --- [STEP 2] SET CHECKABLE AGAR BISA AKTIF ---
+            # Set Checkable agar bisa 'aktif'
             btn.setCheckable(True) 
-            
             btn.setStyleSheet(self.get_menu_style())
             
             # Tambahkan ke grup
@@ -104,7 +120,7 @@ class AplikasiUtama(QMainWindow):
             self.btn_list[0].setChecked(True)
 
     def init_halaman(self):
-        # Tambahkan widget ke stacked widget sesuai urutan index di self.menus
+        # Tambahkan widget ke stacked widget
         self.halaman_konten.addWidget(Dashboard())          # Index 0
         self.halaman_konten.addWidget(SuratMasuk())         # Index 1
         self.halaman_konten.addWidget(SuratKeluar())        # Index 2
@@ -115,12 +131,12 @@ class AplikasiUtama(QMainWindow):
         self.halaman_konten.setCurrentIndex(index)
         current_widget = self.halaman_konten.currentWidget()
         
-        # Pastikan tombol yang sesuai juga ter-cek (berguna jika ganti halaman dari kode lain)
+        # Pastikan tombol navigasi juga ter-update visualnya
         btn = self.nav_group.button(index)
         if btn:
             btn.setChecked(True)
         
-        # Refresh data saat halaman dibuka
+        # Trigger refresh data saat halaman dibuka
         if hasattr(current_widget, 'load_data'):
             current_widget.load_data()
             
@@ -128,13 +144,8 @@ class AplikasiUtama(QMainWindow):
             current_widget.refresh_data()
 
     def get_menu_style(self, is_exit=False):
-        # Warna background saat Hover
         bg_hover = "#e74c3c" if is_exit else "#34495e"
         
-        # Warna background saat Aktif (Checked)
-        bg_checked = "#1abc9c" if not is_exit else "#c0392b"
-        
-        # --- [STEP 3] UPDATE CSS UNTUK STATE CHECKED ---
         return f"""
             QPushButton {{
                 background-color: transparent; 
@@ -143,30 +154,43 @@ class AplikasiUtama(QMainWindow):
                 text-align: left; 
                 padding-left: 30px; 
                 font-size: 14px;
-                border-left: 5px solid transparent; /* Border transparan di awal */
+                border-left: 5px solid transparent; 
             }}
-            
             QPushButton:hover {{
                 background-color: {bg_hover};
                 color: white;
             }}
-            
             /* Efek Tombol Sedang Aktif */
             QPushButton:checked {{
-                background-color: #34495e; /* Warna Background Aktif */
-                color: #1abc9c;            /* Warna Teks Aktif (Hijau Tosca) */
+                background-color: #34495e; 
+                color: #1abc9c;            
                 font-weight: bold;
-                border-left: 5px solid #1abc9c; /* Garis Indikator di Kiri */
+                border-left: 5px solid #1abc9c; 
             }}
         """
 
 if __name__ == "__main__":
+    # --- [UBAH 3] UPDATE ID APLIKASI UNTUK WINDOWS TASKBAR ---
+    # Ini penting agar Taskbar menampilkan logo aplikasi, bukan logo Python.
+    try:
+        myappid = 'instansi.lentera.arsip.v1.0' 
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+    except ImportError:
+        pass
+    # ---------------------------------------------------------
+
     app = QApplication(sys.argv)
     app.setFont(QFont("Segoe UI", 10))
+    
+    # --- SET ICON APLIKASI GLOBAL (Taskbar) ---
+    path_icon_app = os.path.join(os.getcwd(), "assets", "icon.ico")
+    if os.path.exists(path_icon_app):
+        app.setWindowIcon(QIcon(path_icon_app))
+    # ------------------------------------------
+
     window = AplikasiUtama()
     
-    # [PERUBAHAN DI SINI] 
-    # Menggunakan showMaximized() agar langsung full screen saat dibuka
+    # Membuka aplikasi langsung Maximize (Full Screen)
     window.showMaximized() 
     
     sys.exit(app.exec())
